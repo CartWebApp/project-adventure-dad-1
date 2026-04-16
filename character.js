@@ -14,6 +14,9 @@ class Character {
     health;
     maxMana;
     mana;
+    maxStamina;
+    stamina;
+    staminaRegen;
     manaRegen;
     healthRegen;
     luck;
@@ -42,6 +45,9 @@ class Character {
         this.health = 100 * this.maxLife;
         this.maxMana = 0;
         this.mana = 100 * this.maxMana;
+        this.maxStamina = 0;
+        this.stamina = 100 * this.maxStamina;
+        this.staminaRegen = 10;
         this.manaRegen = 5;
         this.healthRegen = 5;
         this.luck = 0;
@@ -90,7 +96,7 @@ obtainables.forEach((obtainable) => {
 
 Character.prototype.applyAttributes = function (attributes) {
     for (const attr of attributes) {
-        if (attr.includes("life regen")) {
+        if (attr.includes(lifeRegen)) {
             const match = attr.match(/(\d+)-?(\d+)?% life regen/);
             if (match) {
                 const min = parseInt(match[1]);
@@ -127,6 +133,21 @@ Character.prototype.applyAttributes = function (attributes) {
                 const max = match[2] ? parseInt(match[2]) : min;
                 this.manaRegen += Math.floor((min + max) / 2);
             }
+        } else if (attr.includes("max stamina")) {
+            const match = attr.match(/(\d+)-?(\d+)?% max stamina/);
+            if (match) {
+                const min = parseInt(match[1]);
+                const max = match[2] ? parseInt(match[2]) : min;
+                this.maxStamina += Math.floor((min + max) / 2);
+                this.stamina = 100 * this.maxStamina; // reset mana to new max
+            }
+        } else if (attr.includes("stamina regen")) {
+            const match = attr.match(/(\d+)-?(\d+)?% stamina regen/);
+            if (match) {
+                const min = parseInt(match[1]);
+                const max = match[2] ? parseInt(match[2]) : min;
+                this.staminaRegen += Math.floor((min + max) / 2);
+            }
         } else if (attr.includes("luck")) {
             const match = attr.match(/(\d+)-?(\d+)? luck/);
             if (match) {
@@ -151,3 +172,8 @@ Character.prototype.applyAttributes = function (attributes) {
         }
     }
 };
+
+export {
+    damageReduction,
+    combatTimer,
+}

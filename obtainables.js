@@ -2,48 +2,63 @@ import {
     effects,
 } from './combat.js'
 
+import {
+    damageReduction,
+    combatTimer,
+} from './character.js'
+
 function getSpellEffect(spellName) {
     const key = String(spellName || "").toLowerCase();
     return effects[key] || null;
 }
 
 // Attribute pools by rarity
-const commonAttributes = [
-    "5-10% life regen",
-    "10-15% max life",
-    "5-8% block chance",
-    "5-15% max mana",
-    "4-6% mana regen",
-    "1-5 luck",
-];
-const rareAttributes = [
-    "8-15% life regen",
-    "15-20% max life",
-    "10-13% block chance",
-    "10-17% max mana",
-    "7-9% mana regen",
-    "3-8 luck",
-];
-const epicAttributes = [
-    "10-20% life regen",
-    "15-25% max life",
-    "15% block chance",
-    "15-20% max mana",
-    "10-13% mana regen",
-    "5-10 luck",
-];
-const legendaryAttributes = [
-    "25% life regen",
-    "50% max life",
-    "20% block chance",
-    "25% max mana",
-    "15% mana regen",
-    "15 luck",
-];
+const commonAttributes = {
+    lifeRegen: [5, 10],
+    maxLife: [10, 15],
+    blockChance: [5, 8],
+    maxMana: [5, 15],
+    manaRegen: [4, 6],
+    luck: [1, 5],
+};
+const rareAttributes = {
+    lifeRegen: [8, 15],
+    maxLife: [15, 20],
+    blockChance: [10, 13],
+    maxMana: [10, 17],
+    manaRegen: [7, 9],
+    luck: [3, 8],
+};
+const epicAttributes = {
+    lifeRegen: [10, 20],
+    maxLife: [15, 25],
+    blockChance: 15,
+    maxMana: [15, 20],
+    manaRegen: [10, 13],
+    luck: [5, 10],
+};
+const legendaryAttributes = {
+    lifeRegen: 25,
+    maxLife: 50,
+    blockChance: 20,
+    maxMana: 25,
+    manaRegen: 15,
+    luck: 15,
+};
 const specialAttributes = {
-    common: ["Defense *2"],
-    rare: ["combat timer +10%"],
-    epic: ["Resistance to all damage types +10%"],
+    common() {
+        // Multi all defence/damageReduction by 1.1
+        return damageReduction * 1.1;
+    },
+    rare() {
+        // Reduce combat timer by 10%
+        return combatTimer * 0.9;
+    },
+    epic() {
+        return null;
+        // Resistance to all damage types by 10%
+        // Build when calc the damage recieved each tick/frame
+    },
     legendary: [
         "1 extra life",
         "All mana regen *2 becomes health regen (remove mana regen)",
