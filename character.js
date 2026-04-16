@@ -9,6 +9,33 @@ import {
 // Character Stats and Inventory
 
 class Character {
+    name;
+    maxLife;
+    health;
+    maxMana;
+    mana;
+    manaRegen;
+    healthRegen;
+    luck;
+    blockChance;
+    damageReduction;
+    combatTimer;
+    extraLives;
+    resistances;
+    burning;
+    blindness;
+    withering;
+    poison;
+    shocked;
+    petrified;
+    rooted;
+    weakness;
+    inventory;
+    spells;
+    equipped;
+    weapon;
+    armor;
+    accessory;
     constructor(name) {
         this.name = name;
         this.maxLife = 0;

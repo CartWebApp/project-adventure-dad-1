@@ -1,5 +1,6 @@
 // Local BaseBuilder
 class BaseBuilder {
+    data;
     constructor() {
         this.data = {};
     }
@@ -141,6 +142,13 @@ const effects = {
 // Enemies
 // Create base builders and constructors
 class Enemy {
+    name;
+    health;
+    healthRegen;
+    attackSpeed;
+    attack1;
+    attack2;
+    attack3;
     constructor({name, health = 0, healthRegen = 0, attackSpeed = 0, attack1 = '', attack2 = '', attack3= ''}) {
         this.name = name;
         this.health = health;
@@ -154,6 +162,10 @@ class Enemy {
 
 class EnemyBuilder extends BaseBuilder {
     static _instanceCounter = 1;
+    _healthRange;
+    _attackSpeedRange;
+    _attackSpeedStrategy;
+    _seed;
     constructor() {
         super();
         this._healthRange = null;

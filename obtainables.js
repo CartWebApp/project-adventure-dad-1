@@ -292,6 +292,7 @@ const GOLD = 100 * SILVER;
 // Use builder pattern and classes for potions, items, weapons, and spells
 
 class BaseBuilder {
+    data;
     constructor() {
         this.data = {};
     }
@@ -302,6 +303,9 @@ class BaseBuilder {
 }
 
 class Potion {
+    name;
+    effects;
+    costs;
     constructor({ name, effect, costs }) {
         this.name = name;
         this.effect = effect;
@@ -324,6 +328,12 @@ class PotionBuilder extends BaseBuilder {
 }
 
 class Item {
+    name;
+    description;
+    throwable;
+    uses;
+    edibleUses;
+    value;
     constructor({
         name,
         description = "",
@@ -368,6 +378,9 @@ class ItemBuilder extends BaseBuilder {
 }
 
 class Weapon {
+    name;
+    general;
+    statsByRarity;
     constructor({ name, general = "", statsByRarity = {} }) {
         this.name = name;
         this.general = general;
@@ -390,6 +403,10 @@ class WeaponBuilder extends BaseBuilder {
 }
 
 class Spell {
+    name;
+    cast;
+    effect;
+    manaCostByRarity;
     constructor({ name, cast = "", effect = {}, manaCostByRarity = {} }) {
         this.name = name;
         this.cast = cast;
