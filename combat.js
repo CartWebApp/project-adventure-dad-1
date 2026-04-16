@@ -1,16 +1,80 @@
+// @ts-check
+/** @import { EnemyBuilderData } from './types.js' */
 // Local BaseBuilder
-class BaseBuilder {
-    data;
-    constructor() {
-        this.data = {};
-    }
-    setName(name) {
-        this.data.name = name;
-        return this;
-    }
+/**
+ * @template {Record<string, unknown>} T
+ * @template V
+ * @typedef {{ [K in (keyof T & string) as `with_${K}`]: (value: T[K]) => Builder<T, V> } & { data: T; build(): V }} Builder<T, V>
+ */
+/**
+ * @template {Record<string, unknown>} T
+ * @template V
+ * @param {(data: Partial<T>) => V} builder
+ * @param {Array<(keyof T & string)>} keys
+ * @returns {Builder<T, V>}
+ */
+function create_builder(builder, ...keys) {
+    /** @type {{ [K in keyof T]?: T[K] }} */
+    const data = {};
+    const proxy = new Proxy(
+        {},
+        {
+            get(fallback, property) {
+                if (property === 'data') {
+                    return data;
+                }
+                if (property === 'build') {
+                    return () => builder(data);
+                }
+                if (
+                    typeof property !== 'string' ||
+                    !keys.some(key => property === `with_${key}`)
+                ) {
+                    return Object.hasOwn(fallback, property)
+                        ? fallback[
+                              /** @type {keyof typeof fallback} */ (property)
+                          ]
+                        : undefined;
+                }
+                /**
+                 * @param {T[keyof T]} value
+                 */
+                return value => {
+                    // @ts-expect-error
+                    data[property.slice(5)] = value;
+                    return proxy;
+                };
+            },
+            ownKeys() {
+                return [...keys.map(key => `with_${key}`), 'build'];
+            }
+        }
+    );
+    return /** @type {Builder<T, V>} */ (proxy);
 }
 
+/**
+ * @template {Record<string, unknown>} T
+ * @param {Array<keyof T & string>} keys
+ */
+const BaseBuilder =
+    /** @type {new <T extends Record<string, unknown>, V>(builder: (data: T) => V, ...keys: Array<keyof T & string>) => Builder<T, V>} */ (
+        /** @type {unknown} */ (
+            /**
+             * @param {(data: Record<string, any>) => any} builder
+             * @param {string[]} keys
+             */
+            function BaseBuilder(builder, ...keys) {
+                return create_builder(builder, ...keys);
+            }
+        )
+    );
+
 // Utility functions
+/**
+ * @param {number} min
+ * @param {number} max
+ */
 function randMinMax(min, max) {
     const minCeiled = Math.ceil(min);
     const maxFloored = Math.floor(max);
@@ -18,23 +82,37 @@ function randMinMax(min, max) {
 }
 
 // Seeder function used to create a unique RNG per enemy instance (Andrew has one that will prob replace this)
+/**
+ * @param {number} seed
+ * @returns {() => number}
+ */
 function seeding(seed) {
     // Random seeder I found
     let t = seed >>> 0;
-    return function() {
-        t += 0x6D2B79F5;
+    return function () {
+        t += 0x6d2b79f5;
         let r = Math.imul(t ^ (t >>> 15), 1 | t);
         r ^= r + Math.imul(r ^ (r >>> 7), r | 61);
         return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
     };
 }
 
+/**
+ * @param {number} min
+ * @param {number} max
+ * @param {() => number} rng
+ */
 function randIntRng(min, max, rng) {
     const mn = Math.ceil(min);
     const mx = Math.floor(max);
     return Math.floor(rng() * (mx - mn + 1)) + mn;
 }
 
+/**
+ * @param {number} min
+ * @param {number} max
+ * @param {() => number} rng
+ */
 function randFloatRng(min, max, rng) {
     return min + rng() * (max - min);
 }
@@ -48,95 +126,95 @@ function randFloatRng(min, max, rng) {
 const effects = {
     // Burning: Deals 2 damage every second over x time
     burning: (durationSeconds = 5, damagePerSecond = 2) => ({
-        name: "Burning",
-        type: "damageOverTime",
+        name: 'Burning',
+        type: 'damageOverTime',
         damagePerSecond,
-        duration: durationSeconds,
+        duration: durationSeconds
     }),
 
     // Blindness: Reduces visibility/accuracy by x% over y time.
     blindness: (durationSeconds = 5, accuracyPenaltyPercent = 50) => ({
-        name: "Blindness",
-        type: "accuracyDebuff",
+        name: 'Blindness',
+        type: 'accuracyDebuff',
         accuracyPenaltyPercent,
-        duration: durationSeconds,
+        duration: durationSeconds
     }),
 
     // Withering: Deals 20 damage every 5 seconds over x time.
     withering: (
         durationSeconds = 15,
         damagePerTick = 20,
-        tickInterval = 5,
+        tickInterval = 5
     ) => ({
-        name: "Withering",
-        type: "damageOverTime",
+        name: 'Withering',
+        type: 'damageOverTime',
         damagePerTick,
         tickInterval,
-        duration: durationSeconds,
+        duration: durationSeconds
     }),
 
     // Poison: Deals x damage every second until dead or cured
     poison: (damagePerSecond = 1) => ({
-        name: "Poison",
-        type: "damageOverTime",
+        name: 'Poison',
+        type: 'damageOverTime',
         damagePerSecond,
         duration: Infinity,
-        untilCured: true,
+        untilCured: true
     }),
 
     // Shocked: Can"t use items/spells/attacks for x time
     shocked: (durationSeconds = 3) => ({
-        name: "Shocked",
-        type: "disable",
+        name: 'Shocked',
+        type: 'disable',
         disabled: true,
-        duration: durationSeconds,
+        duration: durationSeconds
     }),
 
     // Petrified: Target is completely immobilized and cannot act for x time; takes +25% damage while petrified
     petrified: (durationSeconds = 4) => ({
-        name: "Petrified",
-        type: "immobilize",
+        name: 'Petrified',
+        type: 'immobilize',
         immobilized: true,
         duration: durationSeconds,
-        damageTakenMultiplier: 1.25,
+        damageTakenMultiplier: 1.25
     }),
 
     // Rooted: Affected individual always is hit with attacks, deals 1 damage every second over 5 seconds
     rooted: (durationSeconds = 5, damagePerSecond = 1, alwaysHit = true) => ({
-        name: "Rooted",
-        type: "root",
+        name: 'Rooted',
+        type: 'root',
         alwaysHit,
         damagePerSecond,
-        duration: durationSeconds,
+        duration: durationSeconds
     }),
 
     // Weakness: All attacks deal half damage for x time
     weakness: (durationSeconds = 10, damageMultiplier = 0.5) => ({
-        name: "Weakness",
-        type: "damageDebuff",
+        name: 'Weakness',
+        type: 'damageDebuff',
         damageMultiplier,
-        duration: durationSeconds,
+        duration: durationSeconds
     }),
 
     // Iced: Reduces combat timer by x seconds
     iced: (reduceSeconds = 5) => ({
-        name: "Iced",
-        type: "combatTimer",
-        reduceBySeconds: reduceSeconds,
+        name: 'Iced',
+        type: 'combatTimer',
+        reduceBySeconds: reduceSeconds
     }),
 
     // Cursed: Target takes +50% damage and receives reduced healing for x time
     cursed: (
         durationSeconds = 10,
         damageTakenMultiplier = 1.5,
-        reducedHealing = true,
+        reducedHealing = true
     ) => ({
-        name: "Cursed",
-        type: "damageAmplify",
+        name: 'Cursed',
+        type: 'damageAmplify',
         damageTakenMultiplier,
         reducedHealing,
-        duration: durationSeconds,
-    }),
+        duration: durationSeconds
+    })
 };
 
 // Enemies
@@ -144,111 +222,77 @@ const effects = {
 class Enemy {
     name;
     health;
-    healthRegen;
-    attackSpeed;
-    attack1;
-    attack2;
-    attack3;
-    constructor({name, health = 0, healthRegen = 0, attackSpeed = 0, attack1 = '', attack2 = '', attack3= ''}) {
+    health_regen;
+    attack_speed;
+    primary_attack;
+    secondary_attack;
+    tertiary_attack;
+    /**
+     * @param {EnemyBuilderData} param
+     */
+    constructor({
+        name,
+        health = 0,
+        health_regen = 0,
+        attack_speed = 0,
+        primary_attack = '',
+        secondary_attack = '',
+        tertiary_attack = ''
+    }) {
         this.name = name;
         this.health = health;
-        this.healthRegen = healthRegen;
-        this.attackSpeed = attackSpeed;
-        this.attack1 = attack1;
-        this.attack2 = attack2;
-        this.attack3 = attack3;
+        this.health_regen = health_regen;
+        this.attack_speed = attack_speed;
+        this.primary_attack = primary_attack;
+        this.secondary_attack = secondary_attack;
+        this.tertiary_attack = tertiary_attack;
     }
 }
 
-class EnemyBuilder extends BaseBuilder {
+class EnemyBuilder
+    extends /** @type {new (builder: (arg: any) => any, ...keys: string[]) => Builder<EnemyBuilderData, Enemy>} */ (
+        BaseBuilder
+    )
+{
     static _instanceCounter = 1;
-    _healthRange;
-    _attackSpeedRange;
-    _attackSpeedStrategy;
-    _seed;
-    constructor() {
-        super();
-        this._healthRange = null;
-        this._attackSpeedRange = null;
-        this._attackSpeedStrategy = null; // for behaviours like 'matchPlayer' or 'scalesWithHealth'
-        this._seed = Math.floor(Date.now() % 2147483647) ^ Math.floor(Math.random() * 0xffffffff) ^ (EnemyBuilder._instanceCounter++);
-    }
-    setDescription(desc) {
-        this.data.description = desc;
-        return this;
-    }
-    // explicit health (overrides ranges)
-    setHealth(h) {
-        this.data.health = h;
-        return this;
-    }
-    // set a randomized range for health
-    setHealthRange(min, max) {
-        this._healthRange = { min, max };
-        return this;
-    }
-    setHealthReg(hr) {
-        this.data.healthRegen = hr;
-        return this;
-    }
-    // explicit attack speed
-    setAttackSpeed(as) {
-        this.data.attackSpeed = as;
-        return this;
-    }
-    // set a randomized range for attack speed
-    setAttackSpeedRange(min, max) {
-        this._attackSpeedRange = { min, max };
-        return this;
-    }
-    setAttackSpeedStrategy(strategy) {
-        this._attackSpeedStrategy = strategy;
-        return this;
-    }
-    setAttack1(a1) {
-        this.data.attack1 = a1;
-        return this;
-    }
-    setAttack2(a2) {
-        this.data.attack2 = a2;
-        return this;
-    }
-    setAttack3(a3) {
-        this.data.attack3 = a3;
-        return this;
-    }
-    // internal: create the RNG for this instance
-    _createInstanceRng() {
-        return seeding(this._seed);
-    }
-    build() {
-        const rng = this._createInstanceRng();
+    /**
+     * @param {EnemyBuilderData} data
+     */
+    static #builder(data) {
+        const rng = seeding(data.seed);
 
         let healthVal;
-        if (typeof this.data.health === 'number') {
-            healthVal = this.data.health;
-        } else if (this._healthRange) {
-            healthVal = randIntRng(this._healthRange.min, this._healthRange.max, rng);
+        if (typeof data.health === 'number') {
+            healthVal = data.health;
+        } else if (data.health_range !== undefined) {
+            healthVal = randIntRng(
+                ...data.health_range,
+                rng
+            );
         } else {
             healthVal = randMinMax(10, 30);
         }
 
         // compute healthRegen if not explicitly provided
-        if (typeof this.data.healthRegen !== 'number') {
+        if (typeof data.health_regen !== 'number') {
             // base factor by health tiers
             let baseFactor;
-            if (healthVal > 140) baseFactor = 0.06; // very large enemies regen faster
+            if (healthVal > 140)
+                baseFactor = 0.06; // very large enemies regen faster
             else if (healthVal > 80) baseFactor = 0.04; // large
             else if (healthVal > 40) baseFactor = 0.03; // medium
             else baseFactor = 0.02; // small
 
             // overrides for special cases
-            const nameLower = String(this.data.name || '').toLowerCase();
+            const nameLower = String(data.name || '').toLowerCase();
             if (nameLower.includes('troll')) {
                 baseFactor = Math.max(baseFactor, 0.08);
             } else if (nameLower.includes('mimic')) {
                 baseFactor = Math.max(baseFactor, 0.05);
-            } else if (nameLower.includes('plant') || nameLower.includes('slime')) {
+            } else if (
+                nameLower.includes('plant') ||
+                nameLower.includes('slime')
+            ) {
                 // plant and slime have passive sustain
                 baseFactor = Math.max(baseFactor, 0.045);
             } else if (nameLower.includes('beserker')) {
@@ -258,245 +302,268 @@ class EnemyBuilder extends BaseBuilder {
 
             // convert to an integer regen value (HP per tick)
             const regenVal = Math.max(1, Math.round(healthVal * baseFactor));
-            this.data.healthRegen = regenVal;
+            data.health_regen = regenVal;
         }
 
         // decide attack speed
         let attackSpeedVal;
-        if (typeof this.data.attackSpeed === 'number') {
-            attackSpeedVal = this.data.attackSpeed;
-        } else if (this._attackSpeedRange) {
-            attackSpeedVal = Number(randFloatRng(this._attackSpeedRange.min, this._attackSpeedRange.max, rng).toFixed(2));
-        } else if (this._attackSpeedStrategy) {
-            attackSpeedVal = this._attackSpeedStrategy; // leave strategy marker for runtime logic
+        if (typeof data.attack_speed === 'number') {
+            attackSpeedVal = data.attack_speed;
+        } else if (data.attack_speed_range !== undefined) {
+            attackSpeedVal = Number(
+                randFloatRng(
+                    ...data.attack_speed_range,
+                    rng
+                ).toFixed(2)
+            );
+        } else if (data.attack_speed_strategy !== undefined) {
+            attackSpeedVal = data.attack_speed_strategy; // leave strategy marker for runtime logic
         } else {
             attackSpeedVal = Number(randFloatRng(2.5, 3.5, rng).toFixed(2));
         }
 
-        if (!this.data.attack2) this.data.attack2 = null;
-        if (!this.data.attack3) this.data.attack3 = null;
+        if (data.secondary_attack === undefined) data.secondary_attack = null;
+        if (data.tertiary_attack === undefined) data.tertiary_attack = null;
 
-        this.data.rngSeed = this._seed;
-        this.data.health = healthVal;
-        this.data.attackSpeed = attackSpeedVal;
-
-        return new Enemy(this.data);
+        data.health = healthVal;
+        if (typeof attackSpeedVal === 'number') {
+            data.attack_speed = attackSpeedVal;
+        }
+        console.log(data);
+        return new Enemy(data);
+    }
+    constructor() {
+        super(
+            data => EnemyBuilder.#builder(data),
+            'name',
+            'description',
+            'health',
+            'health_range',
+            'health_regen',
+            'attack_speed',
+            'attack_speed_range',
+            'attack_speed_strategy',
+            'primary_attack',
+            'secondary_attack',
+            'tertiary_attack'
+        );
+        this.data.seed =
+            Math.floor(Date.now() % 2147483647) ^
+            Math.floor(Math.random() * 0xffffffff) ^
+            EnemyBuilder._instanceCounter++;
     }
 }
 
 // create instances using builders
 const enemies = [
     new EnemyBuilder()
-        .setName("Assassin")
-        .setDescription("Deadly killer specializing in quick eliminations")
-        .setHealthRange(20, 40)
-        .setAttackSpeedRange(1, 1.8)
-        .setAttack1("Backstab (Basic damage)")
-        .setAttack2("Poison Blade (Poison)")
-        .setAttack3("Vanish (becomes untargetable briefly)")
+        .with_name('Assassin')
+        .with_description('Deadly killer specializing in quick eliminations')
+        .with_health_range([20, 40])
+        .with_attack_speed_range([1, 1.8])
+        .with_primary_attack('Backstab (Basic damage)')
+        .with_secondary_attack('Poison Blade (Poison)')
+        .with_tertiary_attack('Vanish (becomes untargetable briefly)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Bandit")
-        .setDescription("Opportunistic thief who strikes quickly")
-        .setHealthRange(41, 80)
-        .setAttackSpeedRange(1.8, 2.5)
-        .setAttack1("Dagger Slash (Basic damage)")
-        .setAttack2("Dirty Trick (Blindness)")
-        .setAttack3("Steal (takes money)")
+        .with_name('Bandit')
+        .with_description('Opportunistic thief who strikes quickly')
+        .with_health_range([41, 80])
+        .with_attack_speed_range([1.8, 2.5])
+        .with_primary_attack('Dagger Slash (Basic damage)')
+        .with_secondary_attack('Dirty Trick (Blindness)')
+        .with_tertiary_attack('Steal (takes money)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Basilisk")
-        .setDescription("Mythical serpent whose gaze turns victims to stone")
-        .setHealthRange(81, 140)
-        .setAttackSpeedRange(3.5, 5)
-        .setAttack1("Tail Whip (Basic damage)")
-        .setAttack2("Bite (Poison)")
-        .setAttack3("Petrifying Gaze (Petrified)")
+        .with_name('Basilisk')
+        .with_description('Mythical serpent whose gaze turns victims to stone')
+        .with_health_range([81, 140])
+        .with_attack_speed_range([3.5, 5])
+        .with_primary_attack('Tail Whip (Basic damage)')
+        .with_secondary_attack('Bite (Poison)')
+        .with_tertiary_attack('Petrifying Gaze (Petrified)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Beserker")
-        .setDescription("Frenzied warrior that grows stronger as it fights")
-        .setHealthRange(81, 140)
-        .setAttackSpeedStrategy("scalesWithHealth")
-        .setAttack1("Rage Strike (Damage based on health)")
-        .setAttack2("Frenzy (attack speed increases)")
-        .setAttack3("Reckless Swing (Player and self damage)")
+        .with_name('Beserker')
+        .with_description('Frenzied warrior that grows stronger as it fights')
+        .with_health_range([81, 140])
+        .with_attack_speed_strategy('scalesWithHealth')
+        .with_primary_attack('Rage Strike (Damage based on health)')
+        .with_secondary_attack('Frenzy (attack speed increases)')
+        .with_tertiary_attack('Reckless Swing (Player and self damage)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Doppelgänger")
-        .setDescription("Mimics the player\’s abilities")
-        .setHealthRange(41, 80)
-        .setAttackSpeedStrategy("matchPlayer")
-        .setAttack1("Mirror Strike (copies last move)")
-        .setAttack2("Confuse (Cursed)")
+        .with_name('Doppelgänger')
+        .with_description('Mimics the player’s abilities')
+        .with_health_range([41, 80])
+        .with_attack_speed_strategy('matchPlayer')
+        .with_primary_attack('Mirror Strike (copies last move)')
+        .with_secondary_attack('Confuse (Cursed)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Druid")
-        .setDescription("Nature mage who controls plants and animals")
-        .setHealthRange(41, 80)
-        .setAttackSpeedRange(2.5, 3.5)
-        .setAttack1("Vine Whip (Basic damage + 10% to apply rooted)")
-        .setAttack2("Nature\'s Curse (Cursed)")
-        .setAttack3("Vine grasp (Rooted)")
+        .with_name('Druid')
+        .with_description('Nature mage who controls plants and animals')
+        .with_health_range([41, 80])
+        .with_attack_speed_range([2.5, 3.5])
+        .with_primary_attack('Vine Whip (Basic damage + 10% to apply rooted)')
+        .with_secondary_attack("Nature's Curse (Cursed)")
+        .with_tertiary_attack('Vine grasp (Rooted)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Fire Elemental")
-        .setDescription("Living flame that scorches everything")
-        .setHealthRange(41, 80)
-        .setAttackSpeedRange(2.5, 3.5)
-        .setAttack1("Fire Slash (Basic attack with 50% to burn)")
-        .setAttack2("Ignite (+50% damage next turn)")
-        .setAttack3("Frost Burn (Burning + Iced)")
+        .with_name('Fire Elemental')
+        .with_description('Living flame that scorches everything')
+        .with_health_range([41, 80])
+        .with_attack_speed_range([2.5, 3.5])
+        .with_primary_attack('Fire Slash (Basic attack with 50% to burn)')
+        .with_secondary_attack('Ignite (+50% damage next turn)')
+        .with_tertiary_attack('Frost Burn (Burning + Iced)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Fire Salamander")
-        .setDescription("Lava-born lizard immune to heat")
-        .setHealthRange(41, 80)
-        .setAttackSpeedRange(1.8, 2.5)
-        .setAttack1("Flame Bite (Burning)")
-        .setAttack2("Lava Spit (Burning)")
-        .setAttack3("Heat Shield (reduces damage +10%)")
+        .with_name('Fire Salamander')
+        .with_description('Lava-born lizard immune to heat')
+        .with_health_range([41, 80])
+        .with_attack_speed_range([1.8, 2.5])
+        .with_primary_attack('Flame Bite (Burning)')
+        .with_secondary_attack('Lava Spit (Burning)')
+        .with_tertiary_attack('Heat Shield (reduces damage +10%)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Gargoyle")
-        .setDescription("Stone guardian that comes alive")
-        .setHealthRange(81, 140)
-        .setAttackSpeedRange(3.5, 5)
-        .setAttack1("Stone Claw (Basic damage)")
-        .setAttack2("Petrify Touch (Petrified)")
-        .setAttack3("Harden (reduces damage taken +50%)")
+        .with_name('Gargoyle')
+        .with_description('Stone guardian that comes alive')
+        .with_health_range([81, 140])
+        .with_attack_speed_range([3.5, 5])
+        .with_primary_attack('Stone Claw (Basic damage)')
+        .with_secondary_attack('Petrify Touch (Petrified)')
+        .with_tertiary_attack('Harden (reduces damage taken +50%)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Goblin")
-        .setDescription("Small, sneaky creature that fights dirty")
-        .setHealthRange(20, 40)
-        .setAttackSpeedRange(1.8, 2.5)
-        .setAttack1("Stab (Basic attack)")
-        .setAttack2("Escape (dodges next attack)")
-        .setAttack3("Cowardice (+20% dodge chance)")
+        .with_name('Goblin')
+        .with_description('Small, sneaky creature that fights dirty')
+        .with_health_range([20, 40])
+        .with_attack_speed_range([1.8, 2.5])
+        .with_primary_attack('Stab (Basic attack)')
+        .with_secondary_attack('Escape (dodges next attack)')
+        .with_tertiary_attack('Cowardice (+20% dodge chance)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Lightning Elemental")
-        .setDescription("Pure electrical energy crackling with power")
-        .setHealthRange(41, 80)
-        .setAttackSpeedRange(1, 1.8)
-        .setAttack1("Lightning Strike (Basic attack, 10% chance to shock)")
-        .setAttack2("Static Surge (Shock)")
-        .setAttack3("Lightning Dash (Dodge next attack)")
+        .with_name('Lightning Elemental')
+        .with_description('Pure electrical energy crackling with power')
+        .with_health_range([41, 80])
+        .with_attack_speed_range([1, 1.8])
+        .with_primary_attack('Lightning Strike (Basic attack, 10% chance to shock)')
+        .with_secondary_attack('Static Surge (Shock)')
+        .with_tertiary_attack('Lightning Dash (Dodge next attack)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Mimic")
-        .setDescription("Chest monster that ambushes victims")
-        .setHealthRange(81, 140)
-        .setAttackSpeedRange(3.5, 5)
-        .setAttack1("Bite Trap (Basic Attack)")
-        .setAttack2("Slight Heal (+5% health regain)")
-        .setAttack3("Close (+100% damage resistance)")
+        .with_name('Mimic')
+        .with_description('Chest monster that ambushes victims')
+        .with_health_range([81, 140])
+        .with_attack_speed_range([3.5, 5])
+        .with_primary_attack('Bite Trap (Basic Attack)')
+        .with_secondary_attack('Slight Heal (+5% health regain)')
+        .with_tertiary_attack('Close (+100% damage resistance)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Plant monster")
-        .setDescription("Living vegetation that traps prey")
-        .setHealthRange(81, 140)
-        .setAttackSpeedRange(3.5, 5)
-        .setAttack1("Vine Grab (Rooted)")
-        .setAttack2("Spore Cloud (Blindness)")
-        .setAttack3("Drain Life (heals 30% of damage dealt)")
+        .with_name('Plant monster')
+        .with_description('Living vegetation that traps prey')
+        .with_health_range([81, 140])
+        .with_attack_speed_range([3.5, 5])
+        .with_primary_attack('Vine Grab (Rooted)')
+        .with_secondary_attack('Spore Cloud (Blindness)')
+        .with_tertiary_attack('Drain Life (heals 30% of damage dealt)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Rogue Knight")
-        .setDescription("Fallen knight using dishonorable tactics")
-        .setHealthRange(81, 140)
-        .setAttackSpeedRange(2.5, 3.5)
-        .setAttack1("Heavy Slash (Basic damage)")
-        .setAttack2("Shield Bash (Stunned)")
-        .setAttack3("Dark Resolve (Weakness)")
+        .with_name('Rogue Knight')
+        .with_description('Fallen knight using dishonorable tactics')
+        .with_health_range([81, 140])
+        .with_attack_speed_range([2.5, 3.5])
+        .with_primary_attack('Heavy Slash (Basic damage)')
+        .with_secondary_attack('Shield Bash (Stunned)')
+        .with_tertiary_attack('Dark Resolve (Weakness)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Skeleton")
-        .setDescription("Fragile undead warrior")
-        .setHealthRange(20, 40)
-        .setAttackSpeedRange(2.5, 3.5)
-        .setAttack1("Bone Slash (Basic damage)")
-        .setAttack2("Cursed Formation (curse)")
-        .setAttack3("Reassemble (regenerate)")
+        .with_name('Skeleton')
+        .with_description('Fragile undead warrior')
+        .with_health_range([20, 40])
+        .with_attack_speed_range([2.5, 3.5])
+        .with_primary_attack('Bone Slash (Basic damage)')
+        .with_secondary_attack('Cursed Formation (curse)')
+        .with_tertiary_attack('Reassemble (regenerate)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Slime")
-        .setDescription("Gelatinous creature that absorbs attacks")
-        .setHealthRange(41, 80)
-        .setAttackSpeedRange(3.5, 5)
-        .setAttack1("Slam (Basic damage)")
-        .setAttack2("Acid Splash (Poison)")
-        .setAttack3("Split (duplicates at low health)")
+        .with_name('Slime')
+        .with_description('Gelatinous creature that absorbs attacks')
+        .with_health_range([41, 80])
+        .with_attack_speed_range([3.5, 5])
+        .with_primary_attack('Slam (Basic damage)')
+        .with_secondary_attack('Acid Splash (Poison)')
+        .with_tertiary_attack('Split (duplicates at low health)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Troll")
-        .setDescription("Huge brute with regeneration abilities")
-        .setHealthRange(141, 220)
-        .setAttackSpeedRange(3.5, 5)
-        .setAttack1("Club Smash (Basic damage)")
-        .setAttack2("Regenerate (heals over time)")
-        .setAttack3("Ground Slam (Stunned)")
+        .with_name('Troll')
+        .with_description('Huge brute with regeneration abilities')
+        .with_health_range([141, 220])
+        .with_attack_speed_range([3.5, 5])
+        .with_primary_attack('Club Smash (Basic damage)')
+        .with_secondary_attack('Regenerate (heals over time)')
+        .with_tertiary_attack('Ground Slam (Stunned)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Wicked Mage")
-        .setDescription("Corrupt spellcaster using forbidden magic")
-        .setHealthRange(20, 40)
-        .setAttackSpeedRange(2.5, 3.5)
-        .setAttack1("Dark Bolt (Cursed)")
-        .setAttack2("Wither Spell (Withering)")
-        .setAttack3("Elemental Bolt (Random element)")
+        .with_name('Wicked Mage')
+        .with_description('Corrupt spellcaster using forbidden magic')
+        .with_health_range([20, 40])
+        .with_attack_speed_range([2.5, 3.5])
+        .with_primary_attack('Dark Bolt (Cursed)')
+        .with_secondary_attack('Wither Spell (Withering)')
+        .with_tertiary_attack('Elemental Bolt (Random element)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Wind Elemental")
-        .setDescription("A fast-moving spirit of air")
-        .setHealthRange(20, 40)
-        .setAttackSpeedRange(1, 1.8)
-        .setAttack1("Quick Gust (Basic damage)")
-        .setAttack2("Wind Dash (+25% dodge chance)")
-        .setAttack3("Harsh Winds (-15% accuracy)")
+        .with_name('Wind Elemental')
+        .with_description('A fast-moving spirit of air')
+        .with_health_range([20, 40])
+        .with_attack_speed_range([1, 1.8])
+        .with_primary_attack('Quick Gust (Basic damage)')
+        .with_secondary_attack('Wind Dash (+25% dodge chance)')
+        .with_tertiary_attack('Harsh Winds (-15% accuracy)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Woodland Spider")
-        .setDescription("Giant spider lurking in forests")
-        .setHealthRange(41, 80)
-        .setAttackSpeedRange(2.5, 3.5)
-        .setAttack1("Bite (Poison)")
-        .setAttack2("Web Shot (Rooted)")
-        .setAttack3("Skitter (speed boost)")
+        .with_name('Woodland Spider')
+        .with_description('Giant spider lurking in forests')
+        .with_health_range([41, 80])
+        .with_attack_speed_range([2.5, 3.5])
+        .with_primary_attack('Bite (Poison)')
+        .with_secondary_attack('Web Shot (Rooted)')
+        .with_tertiary_attack('Skitter (speed boost)')
         .build(),
 
     new EnemyBuilder()
-        .setName("Zombie")
-        .setDescription("Slow undead warrior")
-        .setHealthRange(81, 140)
-        .setAttackSpeedRange(3.5, 5)
-        .setAttack1("Slash (Basic damage)")
-        .setAttack2("Rotting Bite (Poison)")
-        .setAttack3("Insidious Strike (Weakness)")
-        .build(),
+        .with_name('Zombie')
+        .with_description('Slow undead warrior')
+        .with_health_range([81, 140])
+        .with_attack_speed_range([3.5, 5])
+        .with_primary_attack('Slash (Basic damage)')
+        .with_secondary_attack('Rotting Bite (Poison)')
+        .with_tertiary_attack('Insidious Strike (Weakness)')
+        .build()
 ];
 
-export {
-    effects,
-    enemies,
-};
+export { effects, enemies };
