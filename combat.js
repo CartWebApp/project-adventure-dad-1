@@ -219,7 +219,14 @@ const effects = {
 
 // Enemies
 // Create base builders and constructors
-class Enemy {
+export class Entity {
+    /** @type {string} */
+    name = '';
+    /** @type {number} */
+    health = 0;
+}
+
+class Enemy extends Entity {
     name;
     health;
     health_regen;
@@ -239,6 +246,7 @@ class Enemy {
         secondary_attack = '',
         tertiary_attack = ''
     }) {
+        super();
         this.name = name;
         this.health = health;
         this.health_regen = health_regen;
@@ -265,10 +273,7 @@ class EnemyBuilder
         if (typeof data.health === 'number') {
             healthVal = data.health;
         } else if (data.health_range !== undefined) {
-            healthVal = randIntRng(
-                ...data.health_range,
-                rng
-            );
+            healthVal = randIntRng(...data.health_range, rng);
         } else {
             healthVal = randMinMax(10, 30);
         }
@@ -311,10 +316,7 @@ class EnemyBuilder
             attackSpeedVal = data.attack_speed;
         } else if (data.attack_speed_range !== undefined) {
             attackSpeedVal = Number(
-                randFloatRng(
-                    ...data.attack_speed_range,
-                    rng
-                ).toFixed(2)
+                randFloatRng(...data.attack_speed_range, rng).toFixed(2)
             );
         } else if (data.attack_speed_strategy !== undefined) {
             attackSpeedVal = data.attack_speed_strategy; // leave strategy marker for runtime logic
@@ -460,7 +462,9 @@ const enemies = [
         .with_description('Pure electrical energy crackling with power')
         .with_health_range([41, 80])
         .with_attack_speed_range([1, 1.8])
-        .with_primary_attack('Lightning Strike (Basic attack, 10% chance to shock)')
+        .with_primary_attack(
+            'Lightning Strike (Basic attack, 10% chance to shock)'
+        )
         .with_secondary_attack('Static Surge (Shock)')
         .with_tertiary_attack('Lightning Dash (Dodge next attack)')
         .build(),

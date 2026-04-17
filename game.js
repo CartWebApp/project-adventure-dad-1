@@ -1,3 +1,5 @@
+import { Step } from './story.js';
+
 /**
  * @template T
  */
@@ -21,9 +23,30 @@ class States {
     }
 }
 
-class Game {
-    player;
-    constructor() {
+class Battle {
+    opponents = [];
+}
 
+class Trade {
+    offers = [];
+}
+
+class Dialogue {
+    previous = [];
+}
+
+export class Game {
+    /** @type {Step} */
+    static story;
+    player;
+    /** @type {Step} */
+    current_step = null;
+    constructor() {
+        this.current_step = Game.story;
+    }
+
+    async update() {
+        await this.current_step.execute(this);
+        this.current_step = this.current_step.next;
     }
 }

@@ -1,7 +1,5 @@
 // @ts-check
-import {
-    obtainables
-} from './obtainables.js';
+import { obtainables } from './obtainables.js';
 
 // Character Stats and Inventory
 
