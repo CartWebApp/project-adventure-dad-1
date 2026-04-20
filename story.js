@@ -94,9 +94,14 @@ class Battle extends Step {
         return this;
     }
 
+    /**
+     * @param {Game} game
+     */
     async execute(game) {
         const opponents = await this.opponents(game);
-        
+        while (opponents.some(opponent => opponent.health > 0) || game.player.health > 0) {
+            
+        }
     }
 
     /**
