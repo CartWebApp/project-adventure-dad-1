@@ -1,8 +1,13 @@
 // @ts-check
-import { obtainables } from './obtainables.js';
+
+export const damageReduction = 0;
+export const combatTimer = 100;
 
 // Character Stats and Inventory
 
+/**
+ * @class Character
+ */
 class Character {
     name;
     maxLife;
@@ -20,28 +25,24 @@ class Character {
     combatTimer;
     extraLives;
     resistances;
-    burning;
-    blindness;
-    withering;
-    poison;
-    shocked;
-    petrified;
-    rooted;
-    weakness;
+    /** @type {any[]} */
     inventory;
+    /** @type {any[]} */
     spells;
     equipped;
-    weapon;
-    armor;
-    accessory;
+
+    /**
+     * @param {string} name
+     */
     constructor(name) {
         this.name = name;
-        this.maxLife = 0;
-        this.health = 100 * this.maxLife;
-        this.maxMana = 0;
-        this.mana = 100 * this.maxMana;
-        this.maxStamina = 0;
-        this.stamina = 100 * this.maxStamina;
+        // defaults
+        this.maxLife = 100;
+        this.health = this.maxLife;
+        this.maxMana = 50;
+        this.mana = this.maxMana;
+        this.maxStamina = 100;
+        this.stamina = this.maxStamina;
         this.staminaRegen = 10;
         this.manaRegen = 5;
         this.healthRegen = 5;
@@ -58,114 +59,133 @@ class Character {
             shocked: 0,
             petrified: 0,
             rooted: 0,
-            weakness: 0
+            weakness: 0,
         };
         this.inventory = [];
         this.spells = [];
         this.equipped = {
             weapon: null,
             armor: null,
-            accessory: null
+            accessory: null,
         };
+    }
+
+    /**
+     * @param {any} armorObj
+     */
+    equipArmor(armorObj) {
+        if (!armorObj) return;
+        this.equipped.armor = armorObj;
+        const attributes = armorObj.effects || [];
+        this.applyAttributes(attributes);
+    }
+
+    /**
+     * @param {any} attributes
+     */
+    applyAttributes(attributes) {
+        // Safe guard
+        if (!attributes)
+            return alert("No attributes provided to applyAttributes");
+        const attrs = Array.isArray(attributes) ? attributes : [attributes];
+        for (const attr of attrs) {
+            if (!attr) continue;
+
+            // Object: key -> [value] / [min,max]
+            if (typeof attr === "object" && !Array.isArray(attr)) {
+                for (const [k, v] of Object.entries(attr)) {
+                    applyAttributeKey(this, k, v);
+                }
+                continue;
+            }
+
+            // Special string patterns
+            if (typeof attr === "string") {
+                const s = attr.toLowerCase();
+
+                // Extra life
+                if (s.includes("extra life")) {
+                    this.extraLives += 1;
+                    continue;
+                }
+
+                // Luck +100
+                if (s.includes("luck")) {
+                    const m = s.match(/\+?(\d+)/);
+                    if (m) {
+                        const val = parseInt(m[1], 10);
+                        this.luck += val;
+                    }
+                    continue;
+                }
+
+                // 'resistance to all damage types +10%'
+                if (s.includes("resistance to all damage types")) {
+                    const m = s.match(/\+(\d+)%/);
+                    if (m) this.damageReduction += parseInt(m[1], 10);
+                    continue;
+                }
+            }
+        }
     }
 }
 
-obtainables.forEach(obtainable => {
-    Character.prototype[obtainable] = function () {
-        if (obtainable.includes('item')) {
-            this.inventory.push(obtainable);
-        } else if (obtainable.includes('spell')) {
-            this.spells.push(obtainable);
-        } else if (obtainable.includes('weapon')) {
-            this.equipped.weapon = obtainable;
-        } else if (obtainable.includes('armor')) {
-            this.equipped.armor = obtainable;
-            const attributes =
-                ATTRIBUTES_BY_RARITY[this.getRarity(obtainable)] ?? [];
-            this.applyAttributes(attributes);
-        } else if (obtainable.includes('accessory')) {
-            this.equipped.accessory = obtainable;
-        }
-    };
-});
+/**
+ * @param {Character|any} self
+ * @param {string} key
+ * @param {any} value
+ */
+function applyAttributeKey(self, key, value) {
+    const min = Math.min(Number(value[0]), Number(value[1]));
+    const max = Math.max(Number(value[0]), Number(value[1]));
 
-Character.prototype.applyAttributes = function (attributes) {
-    for (const attr of attributes) {
-        if (attr.includes(lifeRegen)) {
-            const match = attr.match(/(\d+)-?(\d+)?% life regen/);
-            if (match) {
-                const min = parseInt(match[1]);
-                const max = match[2] ? parseInt(match[2]) : min;
-                this.healthRegen += Math.floor((min + max) / 2);
+    const v = Array.isArray(value)
+        ? Math.floor(Math.random() * (max - min + 1)) + min
+        : Number(value);
+    switch (key) {
+        case "lifeRegen":
+        case "healthRegen":
+            self.healthRegen += v;
+            break;
+        case "maxLife":
+            self.maxLife += v;
+            self.health = Math.min(self.health, self.maxLife);
+            break;
+        case "blockChance":
+            self.blockChance += v;
+            break;
+        case "maxMana":
+            self.maxMana += v;
+            self.mana = Math.min(self.mana, self.maxMana);
+            break;
+        case "manaRegen":
+            self.manaRegen += v;
+            break;
+        case "maxStamina":
+            self.maxStamina += v;
+            self.stamina = Math.min(self.stamina, self.maxStamina);
+            break;
+        case "staminaRegen":
+            self.staminaRegen += v;
+            break;
+        case "luck":
+            self.luck += v;
+            break;
+        case "combatTimer":
+            self.combatTimer += v;
+            break;
+        case "damageReduction":
+            self.damageReduction += v;
+            break;
+        default:
+            // unknown key: store on resistances if it exists
+            if (key in self.resistances) {
+                self.resistances[key] += v;
+            } else {
+                // attach as a generic property so data isn't lost
+                self[key] = (self[key] || 0) + v;
             }
-        } else if (attr.includes('max life')) {
-            const match = attr.match(/(\d+)-?(\d+)?% max life/);
-            if (match) {
-                const min = parseInt(match[1]);
-                const max = match[2] ? parseInt(match[2]) : min;
-                this.maxLife += Math.floor((min + max) / 2);
-                this.health = 100 * this.maxLife; // reset health to new max
-            }
-        } else if (attr.includes('block chance')) {
-            const match = attr.match(/(\d+)-?(\d+)?% block chance/);
-            if (match) {
-                const min = parseInt(match[1]);
-                const max = match[2] ? parseInt(match[2]) : min;
-                this.blockChance += Math.floor((min + max) / 2);
-            }
-        } else if (attr.includes('max mana')) {
-            const match = attr.match(/(\d+)-?(\d+)?% max mana/);
-            if (match) {
-                const min = parseInt(match[1]);
-                const max = match[2] ? parseInt(match[2]) : min;
-                this.maxMana += Math.floor((min + max) / 2);
-                this.mana = 100 * this.maxMana; // reset mana to new max
-            }
-        } else if (attr.includes('mana regen')) {
-            const match = attr.match(/(\d+)-?(\d+)?% mana regen/);
-            if (match) {
-                const min = parseInt(match[1]);
-                const max = match[2] ? parseInt(match[2]) : min;
-                this.manaRegen += Math.floor((min + max) / 2);
-            }
-        } else if (attr.includes('max stamina')) {
-            const match = attr.match(/(\d+)-?(\d+)?% max stamina/);
-            if (match) {
-                const min = parseInt(match[1]);
-                const max = match[2] ? parseInt(match[2]) : min;
-                this.maxStamina += Math.floor((min + max) / 2);
-                this.stamina = 100 * this.maxStamina; // reset mana to new max
-            }
-        } else if (attr.includes('stamina regen')) {
-            const match = attr.match(/(\d+)-?(\d+)?% stamina regen/);
-            if (match) {
-                const min = parseInt(match[1]);
-                const max = match[2] ? parseInt(match[2]) : min;
-                this.staminaRegen += Math.floor((min + max) / 2);
-            }
-        } else if (attr.includes('luck')) {
-            const match = attr.match(/(\d+)-?(\d+)? luck/);
-            if (match) {
-                const min = parseInt(match[1]);
-                const max = match[2] ? parseInt(match[2]) : min;
-                this.luck += Math.floor((min + max) / 2);
-            }
-        } else if (attr.includes('combat timer')) {
-            const match = attr.match(/combat timer \+(\d+)%/);
-            if (match) {
-                this.combatTimer += parseInt(match[1]);
-            }
-        } else if (attr.includes('extra life')) {
-            this.extraLives += 1;
-        } else if (attr.includes('Resistance to all damage types')) {
-            const match = attr.match(/Resistance to all damage types \+(\d+)%/);
-            if (match) {
-                this.damageReduction += parseInt(match[1]);
-            }
-        } else if (attr.includes('Luck +100')) {
-            this.luck = 100;
-        }
     }
-};
+}
 
-export { damageReduction, combatTimer };
+export { Character };
