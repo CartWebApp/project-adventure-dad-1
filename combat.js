@@ -1,5 +1,6 @@
 // @ts-check
 /** @import { EnemyBuilderData } from './types.js' */
+/// <reference lib="es2023" />
 // Local BaseBuilder
 /**
  * @template {Record<string, unknown>} T
@@ -86,7 +87,7 @@ function randMinMax(min, max) {
  * @param {number} seed
  * @returns {() => number}
  */
-function seeding(seed) {
+function mulberry32(seed) {
     // Random seeder I found
     let t = seed >>> 0;
     return function () {
@@ -267,7 +268,7 @@ class EnemyBuilder
      * @param {EnemyBuilderData} data
      */
     static #builder(data) {
-        const rng = seeding(data.seed);
+        const rng = mulberry32(data.seed);
 
         let healthVal;
         if (typeof data.health === 'number') {
