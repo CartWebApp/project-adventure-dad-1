@@ -30,12 +30,15 @@ class Character {
     /** @type {any[]} */
     spells;
     equipped;
+    character;
 
     /**
      * @param {string} name
+     * @param {number} character
      */
-    constructor(name) {
+    constructor(name, character) {
         this.name = name;
+        this.character = character;
         // defaults
         this.maxLife = 100;
         this.health = this.maxLife;

@@ -58,7 +58,7 @@ function create_builder(builder, ...keys) {
  * @template {Record<string, unknown>} T
  * @param {Array<keyof T & string>} keys
  */
-const BaseBuilder =
+export const BaseBuilder =
     /** @type {new <T extends Record<string, unknown>, V>(builder: (data: T) => V, ...keys: Array<keyof T & string>) => Builder<T, V>} */ (
         /** @type {unknown} */ (
             /**

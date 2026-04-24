@@ -1,4 +1,4 @@
-import { effects } from './combat.js';
+import { BaseBuilder, effects } from './combat.js';
 
 import { damageReduction, combatTimer } from './character.js';
 
@@ -301,17 +301,6 @@ const GOLD = 100 * SILVER;
 
 // Use builder pattern and classes for potions, items, weapons, and spells
 
-class BaseBuilder {
-    data;
-    constructor() {
-        this.data = {};
-    }
-    setName(name) {
-        this.data.name = name;
-        return this;
-    }
-}
-
 class Potion {
     name;
     effects;
@@ -324,13 +313,8 @@ class Potion {
 }
 
 class PotionBuilder extends BaseBuilder {
-    setEffect(effect) {
-        this.data.effect = effect;
-        return this;
-    }
-    setCosts(costs) {
-        this.data.costs = costs;
-        return this;
+    constructor() {
+        super(data => new Potion(data), 'name', 'effect', 'costs');
     }
     build() {
         return new Potion(this.data);
@@ -342,45 +326,31 @@ class Item {
     description;
     throwable;
     uses;
-    edibleUses;
+    edible_uses;
     value;
+    /**
+     * @param {{ name: string; description?: string; throwable?: boolean; uses?: number; edible_uses?: number; value?: number }} options
+     */
     constructor({
         name,
         description = '',
         throwable = false,
         uses = 1,
-        edibleUses = 0,
+        edible_uses = 0,
         value = 0
     }) {
         this.name = name;
         this.description = description;
         this.throwable = throwable;
         this.uses = uses;
-        this.edibleUses = edibleUses;
+        this.edible_uses = edible_uses;
         this.value = value;
     }
 }
 
 class ItemBuilder extends BaseBuilder {
-    setDescription(desc) {
-        this.data.description = desc;
-        return this;
-    }
-    setThrowable(flag) {
-        this.data.throwable = flag;
-        return this;
-    }
-    setUses(uses) {
-        this.data.uses = uses;
-        return this;
-    }
-    setEdibleUses(u) {
-        this.data.edibleUses = u;
-        return this;
-    }
-    setValue(v) {
-        this.data.value = v;
-        return this;
+    constructor() {
+        super(data => new Item(data), 'name', 'description', 'throwable', 'uses', 'edible_uses', 'value');
     }
     build() {
         return new Item(this.data);
@@ -390,25 +360,17 @@ class ItemBuilder extends BaseBuilder {
 class Weapon {
     name;
     general;
-    statsByRarity;
-    constructor({ name, general = '', statsByRarity = {} }) {
+    stats_by_rarity;
+    constructor({ name, general = '', stats_by_rarity = {} }) {
         this.name = name;
         this.general = general;
-        this.statsByRarity = statsByRarity;
+        this.stats_by_rarity = stats_by_rarity;
     }
 }
 
 class WeaponBuilder extends BaseBuilder {
-    setGeneral(g) {
-        this.data.general = g;
-        return this;
-    }
-    setStatsByRarity(s) {
-        this.data.statsByRarity = s;
-        return this;
-    }
-    build() {
-        return new Weapon(this.data);
+    constructor() {
+        super(data => new Weapon(data), 'name', 'general', 'stats_by_rarity');
     }
 }
 
@@ -416,49 +378,35 @@ class Spell {
     name;
     cast;
     effect;
-    manaCostByRarity;
-    constructor({ name, cast = '', effect = {}, manaCostByRarity = {} }) {
+    mana_cost_by_rarity;
+    constructor({ name, cast = '', effect = {}, mana_cost_by_rarity = {} }) {
         this.name = name;
         this.cast = cast;
         this.effect = effect;
-        this.manaCostByRarity = manaCostByRarity;
+        this.mana_cost_by_rarity = mana_cost_by_rarity;
     }
 }
 
 class SpellBuilder extends BaseBuilder {
-    setCast(c) {
-        this.data.cast = c;
-        return this;
-    }
-    setEffect(e) {
-        this.data.effect = e;
-        return this;
-    }
-    setManaCostByRarity(m) {
-        this.data.manaCostByRarity = m;
-        return this;
-    }
-    setParamsByRarity(p) {
-        this.data.paramsByRarity = p;
-        return this;
-    }
-    build() {
-        // ensure fields exist bcs someone desided to make my life hell by making spells wierd
-        if (!this.data.manaCostByRarity) this.data.manaCostByRarity = {};
-        if (!this.data.paramsByRarity) this.data.paramsByRarity = {};
-        return new Spell(this.data);
+    constructor() {
+        super(data => {
+            // ensure fields exist bcs someone desided to make my life hell by making spells wierd
+            if (!data.mana_cost_by_rarity) data.mana_cost_by_rarity = {};
+            if (!data.params_by_rarity) data.params_by_rarity = {};
+            return new Spell(data);
+        }, 'name', 'mana_cost_by_rarity', 'cast', 'effect', 'params_by_rarity');
     }
 }
 
 // Create instances using builders
 const potions = [
     new PotionBuilder()
-        .setName('Swiftness Potion')
-        .setEffect({
+        .with_name('Swiftness Potion')
+        .with_effect({
             type: 'combatTimerPercent',
             valuesByRarity: { common: 10, rare: 20, epic: 35, legendary: 50 }
         })
-        .setCosts({
+        .with_costs({
             common: 25 * COPPER,
             rare: 5 * SILVER,
             epic: 35 * SILVER,
@@ -466,12 +414,12 @@ const potions = [
         })
         .build(),
     new PotionBuilder()
-        .setName('Health Potion')
-        .setEffect({
+        .with_name('Health Potion')
+        .with_effect({
             type: 'healthRegenPercent',
             valuesByRarity: { common: 10, rare: 25, epic: 50, legendary: 100 }
         })
-        .setCosts({
+        .with_costs({
             common: 10 * COPPER,
             rare: 1 * SILVER,
             epic: 10 * SILVER,
@@ -479,12 +427,12 @@ const potions = [
         })
         .build(),
     new PotionBuilder()
-        .setName('Mana Potion')
-        .setEffect({
+        .with_name('Mana Potion')
+        .with_effect({
             type: 'manaRegenPercent',
             valuesByRarity: { common: 10, rare: 25, epic: 50, legendary: 100 }
         })
-        .setCosts({
+        .with_costs({
             common: 10 * COPPER,
             rare: 1 * SILVER,
             epic: 10 * SILVER,
@@ -492,28 +440,28 @@ const potions = [
         })
         .build(),
     new PotionBuilder()
-        .setName('Inf Mana Potion')
-        .setEffect({
+        .with_name('Inf Mana Potion')
+        .with_effect({
             type: 'infiniteMana',
             valuesByRarity: {
                 epic: { durationSeconds: 5 },
                 legendary: { durationSeconds: 10 }
             }
         })
-        .setCosts({ epic: 3 * GOLD, legendary: 9 * GOLD })
+        .with_costs({ epic: 3 * GOLD, legendary: 9 * GOLD })
         .build(),
     new PotionBuilder()
-        .setName('Shamrock Shake')
-        .setEffect({ type: 'applyPoison', damagePerSecond: 1 })
-        .setCosts({ common: 5 * SILVER })
+        .with_name('Shamrock Shake')
+        .with_effect({ type: 'applyPoison', damagePerSecond: 1 })
+        .with_costs({ common: 5 * SILVER })
         .build(),
     new PotionBuilder()
-        .setName('Stamina Potion')
-        .setEffect({
+        .with_name('Stamina Potion')
+        .with_effect({
             type: 'staminaRegenPercent',
             valuesByRarity: { common: 15, rare: 30, epic: 50, legendary: 100 }
         })
-        .setCosts({
+        .with_costs({
             common: 15 * COPPER,
             rare: 1 * SILVER,
             epic: 10 * SILVER,
@@ -521,12 +469,12 @@ const potions = [
         })
         .build(),
     new PotionBuilder()
-        .setName('Rock Skin Potion')
-        .setEffect({
+        .with_name('Rock Skin Potion')
+        .with_effect({
             type: 'physicalDamageBlockPercent',
             valuesByRarity: { common: 10, rare: 20, epic: 35, legendary: 60 }
         })
-        .setCosts({
+        .with_costs({
             common: 20 * COPPER,
             rare: 2 * SILVER,
             epic: 20 * SILVER,
@@ -534,12 +482,12 @@ const potions = [
         })
         .build(),
     new PotionBuilder()
-        .setName('Luck Potion')
-        .setEffect({
+        .with_name('Luck Potion')
+        .with_effect({
             type: 'battleLuck',
             valuesByRarity: { common: 5, rare: 10, epic: 25, legendary: 100 }
         })
-        .setCosts({
+        .with_costs({
             common: 10 * COPPER,
             rare: 1 * SILVER,
             epic: 10 * SILVER,
@@ -550,93 +498,93 @@ const potions = [
 
 const items = [
     new ItemBuilder()
-        .setName('Holy Hand Grenade')
-        .setDescription(
+        .with_name('Holy Hand Grenade')
+        .with_description(
             'When activated, must be thrown within 3 seconds before it explodes; deals up to 50 damage and may blind (75% chance, 30s).'
         )
-        .setThrowable(true)
-        .setUses(1)
-        .setValue(5 * GOLD)
+        .with_throwable(true)
+        .with_uses(1)
+        .with_value(5 * GOLD)
         .build(),
     new ItemBuilder()
-        .setName('Rock')
-        .setDescription('Can be thrown to deal ~5 damage.')
-        .setThrowable(true)
-        .setUses(1)
-        .setValue(2 * COPPER)
+        .with_name('Rock')
+        .with_description('Can be thrown to deal ~5 damage.')
+        .with_throwable(true)
+        .with_uses(1)
+        .with_value(2 * COPPER)
         .build(),
     new ItemBuilder()
-        .setName('Molotov Cocktail')
-        .setDescription(
+        .with_name('Molotov Cocktail')
+        .with_description(
             'Thrown explosive that applies burning to enemies (8s).'
         )
-        .setThrowable(true)
-        .setUses(1)
-        .setValue(30 * SILVER)
+        .with_throwable(true)
+        .with_uses(1)
+        .with_value(30 * SILVER)
         .build(),
     new ItemBuilder()
-        .setName('Old Boot')
-        .setDescription('Can be thrown to deal 1 damage.')
-        .setThrowable(true)
-        .setUses(1)
-        .setValue(1 * COPPER)
+        .with_name('Old Boot')
+        .with_description('Can be thrown to deal 1 damage.')
+        .with_throwable(true)
+        .with_uses(1)
+        .with_value(1 * COPPER)
         .build(),
     new ItemBuilder()
-        .setName('Potato')
-        .setDescription(
+        .with_name('Potato')
+        .with_description(
             'Throwable and edible: throw to deal 1 damage or eat for +5 health.'
         )
-        .setThrowable(true)
-        .setUses(1)
-        .setEdibleUses(1)
-        .setValue(10 * COPPER)
+        .with_throwable(true)
+        .with_uses(1)
+        .with_edible_uses(1)
+        .with_value(10 * COPPER)
         .build(),
     new ItemBuilder()
-        .setName('Thinkpad X1 Carbon')
-        .setDescription(
+        .with_name('Thinkpad X1 Carbon')
+        .with_description(
             'Throwable: deals 5 explosive damage and applies burning for the rest of the battle.'
         )
-        .setThrowable(true)
-        .setUses(1)
-        .setValue(10 * GOLD)
+        .with_throwable(true)
+        .with_uses(1)
+        .with_value(10 * GOLD)
         .build(),
     new ItemBuilder()
-        .setName('Sock Puppet')
-        .setDescription('Comfort item; edible for small regen (0.1).')
-        .setThrowable(false)
-        .setUses(1)
-        .setValue(10 * COPPER)
+        .with_name('Sock Puppet')
+        .with_description('Comfort item; edible for small regen (0.1).')
+        .with_throwable(false)
+        .with_uses(1)
+        .with_value(10 * COPPER)
         .build(),
     new ItemBuilder()
-        .setName('The Last Straw')
-        .setDescription(
+        .with_name('The Last Straw')
+        .with_description(
             'When held, prevents death (leaves you at 1HP) but halves health regen for the battle.'
         )
-        .setThrowable(false)
-        .setUses(1)
-        .setValue(15 * SILVER)
+        .with_throwable(false)
+        .with_uses(1)
+        .with_value(15 * SILVER)
         .build(),
     new ItemBuilder()
-        .setName('Napkin')
-        .setDescription('When thrown deals brief blindness (70% for 1s).')
-        .setThrowable(true)
-        .setUses(1)
-        .setValue(10 * COPPER)
+        .with_name('Napkin')
+        .with_description('When thrown deals brief blindness (70% for 1s).')
+        .with_throwable(true)
+        .with_uses(1)
+        .with_value(10 * COPPER)
         .build(),
     new ItemBuilder()
-        .setName('Anvil')
-        .setDescription('Drop on enemies to deal 20 damage.')
-        .setThrowable(true)
-        .setUses(3)
-        .setValue(50 * SILVER)
+        .with_name('Anvil')
+        .with_description('Drop on enemies to deal 20 damage.')
+        .with_throwable(true)
+        .with_uses(3)
+        .with_value(50 * SILVER)
         .build()
 ];
 
 const weapons = [
     new WeaponBuilder()
-        .setName('Basic Sword')
-        .setGeneral('Deals 10 damage')
-        .setStatsByRarity({
+        .with_name('Basic Sword')
+        .with_general('Deals 10 damage')
+        .with_stats_by_rarity({
             common: { damage: 10, stamina: 10 },
             rare: { damage: 12, stamina: 10 },
             epic: { damage: 14, stamina: 10 },
@@ -644,9 +592,9 @@ const weapons = [
         })
         .build(),
     new WeaponBuilder()
-        .setName('Basic Dagger')
-        .setGeneral('Deals 5 damage')
-        .setStatsByRarity({
+        .with_name('Basic Dagger')
+        .with_general('Deals 5 damage')
+        .with_stats_by_rarity({
             common: { damage: 5, stamina: 5 },
             rare: { damage: 7, stamina: 5 },
             epic: { damage: 9, stamina: 5 },
@@ -654,9 +602,9 @@ const weapons = [
         })
         .build(),
     new WeaponBuilder()
-        .setName('Basic Axe')
-        .setGeneral('Deals 15 damage')
-        .setStatsByRarity({
+        .with_name('Basic Axe')
+        .with_general('Deals 15 damage')
+        .with_stats_by_rarity({
             common: { damage: 15, stamina: 15 },
             rare: { damage: 17, stamina: 15 },
             epic: { damage: 19, stamina: 15 },
@@ -664,9 +612,9 @@ const weapons = [
         })
         .build(),
     new WeaponBuilder()
-        .setName('Lifesteal Blade')
-        .setGeneral('Steals % of opponents life as health')
-        .setStatsByRarity({
+        .with_name('Lifesteal Blade')
+        .with_general('Steals % of opponents life as health')
+        .with_stats_by_rarity({
             common: { stealPercent: 5, stamina: 20 },
             rare: { stealPercent: 10, stamina: 15 },
             epic: { stealPercent: 10, stamina: 10 },
@@ -674,9 +622,9 @@ const weapons = [
         })
         .build(),
     new WeaponBuilder()
-        .setName('Swift Dagger')
-        .setGeneral('Fast dagger')
-        .setStatsByRarity({
+        .with_name('Swift Dagger')
+        .with_general('Fast dagger')
+        .with_stats_by_rarity({
             common: { damage: 7, stamina: 5 },
             rare: { damage: 8, stamina: 4 },
             epic: { damage: 10, stamina: 3 },
@@ -684,9 +632,9 @@ const weapons = [
         })
         .build(),
     new WeaponBuilder()
-        .setName('Fire Axe')
-        .setGeneral('Deals damage and applies burning')
-        .setStatsByRarity({
+        .with_name('Fire Axe')
+        .with_general('Deals damage and applies burning')
+        .with_stats_by_rarity({
             common: { damage: 8, stamina: 10, burnSeconds: 4 },
             rare: { damage: 10, stamina: 10, burnSeconds: 6 },
             epic: { damage: 14, stamina: 15, burnSeconds: 8 },
@@ -697,135 +645,135 @@ const weapons = [
 
 const spells = [
     new SpellBuilder()
-        .setName('Mana Bolt')
-        .setCast('battle')
-        .setEffect({ type: 'directDamage' })
-        .setManaCostByRarity({ common: 15, rare: 20, epic: 30, legendary: 50 })
+        .with_name('Mana Bolt')
+        .with_cast('battle')
+        .with_effect({ type: 'directDamage' })
+        .with_mana_cost_by_rarity({ common: 15, rare: 20, epic: 30, legendary: 50 })
         .build(),
     new SpellBuilder()
-        .setName('Black Hole')
-        .setCast('battle')
-        .setEffect({ type: 'areaSuck' })
-        .setParamsByRarity({
+        .with_name('Black Hole')
+        .with_cast('battle')
+        .with_effect({ type: 'areaSuck' })
+        .with_paramsByRarity({
             epic: { radius: 10, damagePerTick: 15 },
             legendary: { radius: 15, damagePerTick: 20 }
         })
-        .setManaCostByRarity({ epic: 40, legendary: 50 })
+        .with_mana_cost_by_rarity({ epic: 40, legendary: 50 })
         .build(),
     new SpellBuilder()
-        .setName('Guardian Angel')
-        .setCast('anywhere')
-        .setEffect({ type: 'guidance' })
-        .setParamsByRarity({ legendary: { persistent: true } })
-        .setManaCostByRarity({ legendary: 100 })
+        .with_name('Guardian Angel')
+        .with_cast('anywhere')
+        .with_effect({ type: 'guidance' })
+        .with_paramsByRarity({ legendary: { persistent: true } })
+        .with_mana_cost_by_rarity({ legendary: 100 })
         .build(),
     new SpellBuilder()
-        .setName('Magic Missile')
-        .setCast('battle/doors')
-        .setEffect({ type: 'explosive' })
-        .setParamsByRarity({
+        .with_name('Magic Missile')
+        .with_cast('battle/doors')
+        .with_effect({ type: 'explosive' })
+        .with_paramsByRarity({
             common: { damage: 18 },
             rare: { damage: 22 },
             epic: { damage: 28 },
             legendary: { damage: 36 }
         })
-        .setManaCostByRarity({ common: 12, rare: 22, epic: 30, legendary: 40 })
+        .with_mana_cost_by_rarity({ common: 12, rare: 22, epic: 30, legendary: 40 })
         .build(),
     new SpellBuilder()
-        .setName('Portal')
-        .setCast('non-battle')
-        .setEffect({ type: 'teleport' })
-        .setManaCostByRarity({})
+        .with_name('Portal')
+        .with_cast('non-battle')
+        .with_effect({ type: 'teleport' })
+        .with_mana_cost_by_rarity({})
         .build(),
     new SpellBuilder()
-        .setName('Earthquake')
-        .setCast('battle')
-        .setEffect({ type: 'areaDamage', damage: 15 })
-        .setParamsByRarity({
+        .with_name('Earthquake')
+        .with_cast('battle')
+        .with_effect({ type: 'areaDamage', damage: 15 })
+        .with_paramsByRarity({
             rare: { durationMinutes: 1 },
             epic: { durationMinutes: 2.5 },
             legendary: { durationMinutes: 5 }
         })
-        .setManaCostByRarity({ rare: 25, epic: 40, legendary: 60 })
+        .with_mana_cost_by_rarity({ rare: 25, epic: 40, legendary: 60 })
         .build(),
     new SpellBuilder()
-        .setName('Curse of the Plague')
-        .setCast('battle')
-        .setEffect({ type: 'randomEffect' })
-        .setParamsByRarity({
+        .with_name('Curse of the Plague')
+        .with_cast('battle')
+        .with_effect({ type: 'randomEffect' })
+        .with_paramsByRarity({
             rare: { effectPercent: 10, duration: 30 },
             epic: { effectPercent: 10, duration: 40 },
             legendary: { effectPercent: 15, duration: 50 }
         })
-        .setManaCostByRarity({ rare: 30, epic: 40, legendary: 50 })
+        .with_mana_cost_by_rarity({ rare: 30, epic: 40, legendary: 50 })
         .build(),
     new SpellBuilder()
-        .setName("Zeus's Blessing")
-        .setCast('battle')
-        .setEffect({ type: 'lightningStorm' })
-        .setParamsByRarity({
+        .with_name("Zeus's Blessing")
+        .with_cast('battle')
+        .with_effect({ type: 'lightningStorm' })
+        .with_paramsByRarity({
             rare: { targets: 'enemies', durationMinutes: 2 },
             epic: { targets: 'enemies', durationMinutes: 4 },
             legendary: { targets: 'enemies', durationMinutes: 8 }
         })
-        .setManaCostByRarity({ rare: 25, epic: 35, legendary: 55 })
+        .with_mana_cost_by_rarity({ rare: 25, epic: 35, legendary: 55 })
         .build(),
     new SpellBuilder()
-        .setName('Godlike')
-        .setCast('battle')
-        .setEffect({ type: 'omniBuff' })
-        .setParamsByRarity({ legendary: { durationSeconds: 20 } })
-        .setManaCostByRarity({ legendary: 80 })
+        .with_name('Godlike')
+        .with_cast('battle')
+        .with_effect({ type: 'omniBuff' })
+        .with_paramsByRarity({ legendary: { durationSeconds: 20 } })
+        .with_mana_cost_by_rarity({ legendary: 80 })
         .build(),
     new SpellBuilder()
-        .setName('Bloody Exchange')
-        .setCast('battle')
-        .setEffect({ type: 'healthTrade' })
-        .setParamsByRarity({
+        .with_name('Bloody Exchange')
+        .with_cast('battle')
+        .with_effect({ type: 'healthTrade' })
+        .with_paramsByRarity({
             rare: { percent: 20 },
             epic: { percent: 50 },
             legendary: { percent: 80 }
         })
-        .setManaCostByRarity({ rare: 0, epic: 0, legendary: 0 })
+        .with_mana_cost_by_rarity({ rare: 0, epic: 0, legendary: 0 })
         .build(),
     new SpellBuilder()
-        .setName('Blessing of Life')
-        .setCast('anywhere')
-        .setEffect({ type: 'fullRegen' })
-        .setParamsByRarity({
+        .with_name('Blessing of Life')
+        .with_cast('anywhere')
+        .with_effect({ type: 'fullRegen' })
+        .with_paramsByRarity({
             epic: { castTimeSeconds: 90 },
             legendary: { castTimeSeconds: 45 }
         })
-        .setManaCostByRarity({ epic: 0, legendary: 0 })
+        .with_mana_cost_by_rarity({ epic: 0, legendary: 0 })
         .build(),
     new SpellBuilder()
-        .setName('Fireball')
-        .setCast('battle')
-        .setEffect({ type: 'explosiveWithBurn' })
-        .setParamsByRarity({
+        .with_name('Fireball')
+        .with_cast('battle')
+        .with_effect({ type: 'explosiveWithBurn' })
+        .with_paramsByRarity({
             common: { damage: 5, burnSeconds: 4 },
             rare: { damage: 8, burnSeconds: 8 },
             epic: { damage: 12, burnSeconds: 10 },
             legendary: { damage: 24, burnSeconds: 15 }
         })
-        .setManaCostByRarity({ common: 14, rare: 24, epic: 28, legendary: 32 })
+        .with_mana_cost_by_rarity({ common: 14, rare: 24, epic: 28, legendary: 32 })
         .build(),
     new SpellBuilder()
-        .setName('Raise Dead')
-        .setCast('battle')
-        .setEffect({ type: 'summon' })
-        .setParamsByRarity({
+        .with_name('Raise Dead')
+        .with_cast('battle')
+        .with_effect({ type: 'summon' })
+        .with_paramsByRarity({
             rare: { count: 2 },
             epic: { count: 6 },
             legendary: { count: 8 }
         })
-        .setManaCostByRarity({ rare: 30, epic: 45, legendary: 60 })
+        .with_mana_cost_by_rarity({ rare: 30, epic: 45, legendary: 60 })
         .build(),
     new SpellBuilder()
-        .setName('Cleanse')
-        .setCast('anywhere')
-        .setEffect({ type: 'clearEffects' })
-        .setManaCostByRarity({ legendary: 75 })
+        .with_name('Cleanse')
+        .with_cast('anywhere')
+        .with_effect({ type: 'clearEffects' })
+        .with_mana_cost_by_rarity({ legendary: 75 })
         .build()
 ];
 

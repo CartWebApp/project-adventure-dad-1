@@ -1,4 +1,4 @@
-import { Step } from './story.js';
+/** @import { Step } from './story.js' */
 
 /**
  * @template T
@@ -39,13 +39,16 @@ export class Game {
     /** @type {Step} */
     static story;
     player;
-    /** @type {Step} */
+    /** @type {Step | null} */
     current_step = null;
     constructor() {
         this.current_step = Game.story;
     }
 
     async update() {
+        if (this.current_step === null) {
+            return;
+        }
         await this.current_step.execute(this);
         this.current_step = this.current_step.next;
     }

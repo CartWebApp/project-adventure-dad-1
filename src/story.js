@@ -1,10 +1,11 @@
 import { Entity } from './combat.js';
 import { STATES } from './constants.js';
 import { Game } from './game.js';
+import { select } from './ui.js';
 
 export class Step {
     /** @type {(typeof STATES)[keyof typeof STATES]} */
-    state;
+    state = STATES.TRAVEL;
     /** @type {Step | null} */
     next = null;
     /** @type {Step | null} */
@@ -42,12 +43,11 @@ export class Step {
     }
 }
 
-
 class Branch extends Step {
     determiner;
 
     /** @type {Step[]} */
-    branches;
+    branches = [];
 
     /**
      * @param {(game: Game) => number | Promise<number>} determiner
@@ -58,21 +58,53 @@ class Branch extends Step {
     }
 
     /**
-     * @param {Step[]} branches
+     * @param {Array<Step | null>} branches
      */
     with_branches(...branches) {
-        this.branches = branches;
-        for (const branch of branches) {
+        this.branches = branches.map(branch => branch !== null ? branch : new Execute(() => {}));
+        for (const branch of this.branches) {
             branch.parent = this;
         }
         return this;
     }
 
-    then = null;
-
+    /**
+     * @param {Game} game
+     */
     async execute(game) {
         const branch = this.branches[await this.determiner(game)];
         await branch.execute(game);
+    }
+
+    /**
+     * @template {Step} Next
+     * @param {Next} step
+     * @returns {Next}
+     */
+    then(step) {
+        for (const branch of this.branches) {
+            branch.next = step;
+            step.prev = branch;
+        }
+        return step;
+    }
+}
+
+class Execute extends Step {
+    executor;
+    /**
+     * @param {(game: Game) => Promise<void> | void} executor
+     */
+    constructor(executor) {
+        super();
+        this.executor = executor;
+    }
+
+    /**
+     * @param {Game} game
+     */
+    async execute(game) {
+        await this.executor(game);
     }
 }
 
@@ -81,7 +113,9 @@ class Battle extends Step {
     opponents = () => [];
     state = STATES.BATTLE;
     won = false;
+    /** @type {Step | null} */
     #if_won = null;
+    /** @type {Step | null} */
     #if_lost = null;
     constructor() {
         super();
@@ -124,6 +158,17 @@ class Battle extends Step {
     }
 }
 
-Game.story = new Branch(() => {
+Game.story = new Branch(async () => {
+    const choice = await select('What character do you prefer?', ['Knight', 'Slave', 'Beggar']);
+    return choice === 'Knight' ? 0 : choice === 'Slave' ? 1 : 2;
+}).with_branches(
+    new Execute(game => {
+        game.player;
+    }),
+    new Execute(game => {
 
-}).with_branches()
+    }),
+    new Execute(game => {
+
+    })
+).then(new Step())
