@@ -74,7 +74,7 @@ class Character {
      * @param {any} armorObj
      */
     equipArmor(armorObj) {
-        if (!armorObj) return;
+        if (!armorObj) return alert('Wrong value error (equipArmor)');
         this.equipped.armor = armorObj;
         const attributes = armorObj.effects || [];
         this.applyAttributes(attributes);
@@ -86,7 +86,7 @@ class Character {
     applyAttributes(attributes) {
         // Safe guard
         if (!attributes)
-            return alert("No attributes provided to applyAttributes");
+            return alert("Wrong value error (applyAttributes)");
         const attrs = Array.isArray(attributes) ? attributes : [attributes];
         for (const attr of attrs) {
             if (!attr) continue;
