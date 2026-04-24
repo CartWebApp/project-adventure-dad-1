@@ -6,9 +6,14 @@ export const TREE_TRUNK_HEIGHT = 50;
 export const TREE_WIDTH = 100;
 export const GRASS_COLOR = '#295c1b';
 export const BENCHMARKING = false;
-export const STATES = {
+export const STATES = /** @type {const} */ ({
     TRAVEL: 1,
     DIALOGUE: 2,
     TRADE: 3,
-    BATTLE: 4
-}
+    BATTLE: 4,
+});
+export const CHARACTER_CHOICES = /** @type {const} */ ({
+    KNIGHT: 1,
+    SLAVE: 2,
+    BEGGAR: 3
+});

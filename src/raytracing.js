@@ -21,28 +21,26 @@ export class Entity {
         /** the ending angle of the light arc, an integer between 0 and 360 greater than the `start_angle` */
         end_angle: 0,
         /** how much light is absorbed by the entity, a number between 0 and 1 */
-        absorption: 0
+        absorption: 0,
     };
     /**
      * @param {Renderer} renderer
      * @param {number} x
      * @param {number} y
      */
-    render(renderer, x, y) {
-        
-    }
+    render(renderer, x, y) {}
 }
 
 /**
  * Given points `a` and `b` and integer `precision`, returns an array of points between `a` and `b`.
- * The amount of points can be determined by multiplying the distance of `a` and `b` by `precision`. 
+ * The amount of points can be determined by multiplying the distance of `a` and `b` by `precision`.
  * Example:
  * ```js
  * points_between(
  *    {
  *       x: 0,
  *       y: 0
- *    }, 
+ *    },
  *    {
  *       x: 2,
  *       y: 2
@@ -77,8 +75,8 @@ function center(...points) {
     const y_points = points.map(({ y }) => y);
     return {
         x: (Math.min(...x_points) + Math.max(...x_points)) / 2,
-        y: (Math.min(...y_points) + Math.max(...y_points)) / 2
-    }
+        y: (Math.min(...y_points) + Math.max(...y_points)) / 2,
+    };
 }
 
 /**
@@ -87,11 +85,14 @@ function center(...points) {
  * @param {{ x: number; y: number }} point
  */
 function slope(origin, point) {
-    return /** @type {[number, number]} */ ([(point.y - origin.y), (point.x - origin.x)]);
+    return /** @type {[number, number]} */ ([
+        point.y - origin.y,
+        point.x - origin.x,
+    ]);
 }
 
 /**
- * Returns the angle of a line between an `origin` and `point` in radians. 
+ * Returns the angle of a line between an `origin` and `point` in radians.
  * @param {{ x: number; y: number }} origin
  * @param {{ x: number; y: number }} point
  */
@@ -103,7 +104,7 @@ function angleof(origin, point) {
 }
 
 /**
- * Given an array of points `points`, and degrees `start` and `end`, returns an array of points that contains all `points` that are in the arc from angles `start` to `end`. 
+ * Given an array of points `points`, and degrees `start` and `end`, returns an array of points that contains all `points` that are in the arc from angles `start` to `end`.
  * @param {Array<{ x: number; y: number }>} points
  * @param {number} start
  * @param {number} end
@@ -130,10 +131,10 @@ function slice(points, start, end) {
 /**
  * An extension of the offscreen renderer with raytracing capabilities.
  * Unlike `Renderer` and `Renderer.Offscreen`, the `RaytracingRenderer` is best used with the `Entity` class, which provides lighting information.
- * With this, you can define light sources and how various elements react to and transform light that passes through them. 
- * Performance is dependent on the number of entities, the configured `precision`, and the amount of points each entity's outline has. 
- * This also allows you to configure how each entity is layered, making the `RaytracingRenderer` well-suited for more decentralized use. 
- * Due to differences in how the raytracing renderer works as opposed to other renderers, a `background` callback must be passed to add consistent backgrounds. 
+ * With this, you can define light sources and how various elements react to and transform light that passes through them.
+ * Performance is dependent on the number of entities, the configured `precision`, and the amount of points each entity's outline has.
+ * This also allows you to configure how each entity is layered, making the `RaytracingRenderer` well-suited for more decentralized use.
+ * Due to differences in how the raytracing renderer works as opposed to other renderers, a `background` callback must be passed to add consistent backgrounds.
  */
 export class RaytracingRenderer extends Renderer.Offscreen {
     /**
@@ -142,7 +143,12 @@ export class RaytracingRenderer extends Renderer.Offscreen {
      * @param {(renderer: RaytracingRenderer) => void} [background]
      * @param {(canvas: HTMLCanvasElement | OffscreenCanvas) => HTMLCanvasElement | OffscreenCanvas} [render_pass]
      */
-    constructor(offscreen, display, background = () => {}, render_pass = canvas => canvas) {
+    constructor(
+        offscreen,
+        display,
+        background = () => {},
+        render_pass = canvas => canvas
+    ) {
         super(offscreen, display, render_pass);
         this.#background = background;
     }
@@ -151,7 +157,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
     #entities = [];
     #map = new InterpolatingEntityMap();
     #background;
-    
+
     /** how much precision to use for raytracing */
     precision = 4;
 
@@ -162,7 +168,9 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         if (this.#queued_render) {
             return;
         }
-        let { resolve, promise } = /** @type {PromiseWithResolvers<void>} */ (Promise.withResolvers());
+        let { resolve, promise } = /** @type {PromiseWithResolvers<void>} */ (
+            Promise.withResolvers()
+        );
         this.promise = promise;
         this.#queued_render = true;
         requestAnimationFrame(() => {
@@ -183,7 +191,13 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                 this.ctx.save();
                 const points = entity.outline
                     .map(point => ({ x: point.x + x, y: point.y + y }))
-                    .flatMap((point, i, array) => points_between(point, array[i + 1] ?? array[0], this.precision));
+                    .flatMap((point, i, array) =>
+                        points_between(
+                            point,
+                            array[i + 1] ?? array[0],
+                            this.precision
+                        )
+                    );
                 if (this.#is_on_screen(e)) {
                     entity.render(this, x, y);
                 }
@@ -194,7 +208,10 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                 //     continue;
                 // }
                 // console.log(entity);
-                if (entity.lighting.start_angle === entity.lighting.end_angle || entity.lighting.level === 0) {
+                if (
+                    entity.lighting.start_angle === entity.lighting.end_angle ||
+                    entity.lighting.level === 0
+                ) {
                     this.ctx.restore();
                     continue;
                 }
@@ -211,7 +228,14 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                 // this.#image = this.ctx.getImageData(0, 0, this.width, this.height);
                 for (const point of raytracing_points) {
                     const [rise, run] = slope(origin, point);
-                    this.#trace_ray(e.entity, point.x, point.y, run / this.precision, rise / this.precision, entity.lighting);
+                    this.#trace_ray(
+                        e.entity,
+                        point.x,
+                        point.y,
+                        run / this.precision,
+                        rise / this.precision,
+                        entity.lighting
+                    );
                 }
                 // this.ctx.lineWidth = 5;
                 // this.ctx.strokeStyle = 'white';
@@ -268,7 +292,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
     }
 
     /** @type {Map<string, Array<{ x: number; y: number }>>} */
-    #ray_cache = new Map;
+    #ray_cache = new Map();
     /**
      * @param {number} r
      * @param {number} g
@@ -279,7 +303,9 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         const G = g.toString(16);
         const B = b.toString(16);
         const A = ((alpha * 255) | 0).toString(16);
-        return `#${R.length === 1 ? '0' : ''}${R}${G.length === 1 ? '0' : ''}${G}${B.length === 1 ? '0' : ''}${B}${A.length === 1 ? '0' : ''}${A}`;
+        return `#${R.length === 1 ? '0' : ''}${R}${
+            G.length === 1 ? '0' : ''
+        }${G}${B.length === 1 ? '0' : ''}${B}${A.length === 1 ? '0' : ''}${A}`;
     }
 
     /** @type {Array<{ x: number; y: number }> | null} */
@@ -305,7 +331,12 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         }
         // console.log(points);
         this.ctx.lineWidth = 5;
-        const gradient = this.ctx.createLinearGradient(points[0].x, points[0].y, points[points.length - 1].x, points[points.length - 1].y);
+        const gradient = this.ctx.createLinearGradient(
+            points[0].x,
+            points[0].y,
+            points[points.length - 1].x,
+            points[points.length - 1].y
+        );
         const path = new Path2D();
         let shadow_path = new Path2D();
         // this.#current_path ??= new Path2D();
@@ -321,20 +352,37 @@ export class RaytracingRenderer extends Renderer.Offscreen {
             const { x, y } = point;
             if (!shading) {
                 path.lineTo(x, y);
-                if (this.#last_points !== null && index > 0 && this.#last_points.length > index) {
+                if (
+                    this.#last_points !== null &&
+                    index > 0 &&
+                    this.#last_points.length > index
+                ) {
                     const fill = new Path2D();
                     fill.moveTo(x, y);
-                    fill.lineTo(this.#last_points[index].x, this.#last_points[index].y);
-                    fill.lineTo(this.#last_points[index - 1].x, this.#last_points[index - 1].y);
+                    fill.lineTo(
+                        this.#last_points[index].x,
+                        this.#last_points[index].y
+                    );
+                    fill.lineTo(
+                        this.#last_points[index - 1].x,
+                        this.#last_points[index - 1].y
+                    );
                     fill.lineTo(points[index - 1].x, points[index - 1].y);
                     fill.lineTo(x, y);
-                    this.ctx.fillStyle = this.#serialize_color(...lighting.hue, lighting.level);
+                    this.ctx.fillStyle = this.#serialize_color(
+                        ...lighting.hue,
+                        lighting.level
+                    );
                     this.ctx.fill(fill);
                 }
             }
             const entity = this.#map.get(x, y);
             if (shading) {
-                if (entity !== null && entity !== lit_entity && entity.entity !== parent_entity) {
+                if (
+                    entity !== null &&
+                    entity !== lit_entity &&
+                    entity.entity !== parent_entity
+                ) {
                     console.log(entity);
                     shadow_path.moveTo(x, y);
                     shadow_path.rect(x, y, 5, 5);
@@ -351,7 +399,8 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                     shadow = lighting.level;
                     lit_entity = entity;
                 }
-                lighting.level -= (lighting.level * entity.entity.lighting.absorption);
+                lighting.level -=
+                    lighting.level * entity.entity.lighting.absorption;
             }
             if (+lighting.level.toFixed(2) === 0) {
                 shading = true;
@@ -363,7 +412,10 @@ export class RaytracingRenderer extends Renderer.Offscreen {
             lighting.level *= 0.99;
             // lighting.level -= (lighting.level * Math.hypot(this.width, this.height));
             // if (!shading) {
-                gradient.addColorStop(points.indexOf(point) / (points.length - 1), this.#serialize_color(...lighting.hue, lighting.level));
+            gradient.addColorStop(
+                points.indexOf(point) / (points.length - 1),
+                this.#serialize_color(...lighting.hue, lighting.level)
+            );
             // }
         }
         // if (this.#last_points === null || this.#last_points.length - 1 < light_index) {
@@ -374,7 +426,13 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         //     // this.#current_path.arcTo(midpoint.x, midpoint.y, points[light_index].x, points[light_index].y, 5);
         // }
         this.#last_points = points.slice(0, light_index);
-        const last_point_on_screen = this.#last_points.findLastIndex(value => value.x >= 0 && value.y >= 0 && value.x <= this.width && value.y <= this.height);
+        const last_point_on_screen = this.#last_points.findLastIndex(
+            value =>
+                value.x >= 0 &&
+                value.y >= 0 &&
+                value.x <= this.width &&
+                value.y <= this.height
+        );
         this.#last_points = this.#last_points.slice(0, last_point_on_screen);
         // this.#edges.push(points[last_point_on_screen]);
     }
@@ -390,9 +448,24 @@ export class RaytracingRenderer extends Renderer.Offscreen {
     #trace_ray(entity, x, y, delta_x, delta_y, { ...lighting }) {
         const serialized = `${x};${y};${delta_x};${delta_y}`;
         if (this.#ray_cache.has(serialized)) {
-            this.#trace_ray_using_cache(entity, lighting, .../** @type {Array<{ x: number; y: number }>} */ (this.#ray_cache.get(serialized)));
+            this.#trace_ray_using_cache(
+                entity,
+                lighting,
+                .../** @type {Array<{ x: number; y: number }>} */ (
+                    this.#ray_cache.get(serialized)
+                )
+            );
         }
-        const points = this.#generate_points(x, y, delta_x, delta_y, 0, this.width, 0, this.height);
+        const points = this.#generate_points(
+            x,
+            y,
+            delta_x,
+            delta_y,
+            0,
+            this.width,
+            0,
+            this.height
+        );
         this.#ray_cache.set(serialized, points);
         this.#trace_ray_using_cache(entity, lighting, ...points);
         return;
@@ -424,8 +497,8 @@ export class RaytracingRenderer extends Renderer.Offscreen {
     }
 
     /**
-     * Adds an entity to be queued to render. 
-     * At the next animation frame, the entity queue will be flushed, and all entities in the queue will be rendered and raytraced. 
+     * Adds an entity to be queued to render.
+     * At the next animation frame, the entity queue will be flushed, and all entities in the queue will be rendered and raytraced.
      * @param {Entity} entity
      * @param {number} x
      * @param {number} y
@@ -434,10 +507,12 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         const e = {
             entity,
             x,
-            y
+            y,
         };
         this.#entities.push(e);
-        this.#entities = this.#entities.toSorted((a, b) => a.entity.layer - b.entity.layer);
+        this.#entities = this.#entities.toSorted(
+            (a, b) => a.entity.layer - b.entity.layer
+        );
         this.#map.add(e);
         this.#queue_render();
     }

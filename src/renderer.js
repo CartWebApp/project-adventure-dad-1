@@ -390,4 +390,5 @@ class Renderer {
         this.ctx.fillText(text, x, y, max_width);
     }
 }
+
 export { Renderer };

@@ -1,9 +1,6 @@
-import { noise } from './noise.js';
-import { Renderer } from './renderer.js';
-import { GRASS_COLOR, TREE_HEIGHT, TREE_LEAF_COLOR, TREE_TRUNK_COLOR, TREE_TRUNK_HEIGHT, TREE_TRUNK_WIDTH, TREE_WIDTH } from './constants.js';
-import { Entity, RaytracingRenderer } from './raytracing.js';
+
+import { RaytracingRenderer } from './raytracing.js';
 import { pixelator } from './utils.js';
-import { dialog, select } from './ui.js';
 const { Game } = await import('./game.js').then(async res => {
     await import('./story.js');
     return res;
@@ -30,6 +27,7 @@ const renderer = new RaytracingRenderer(canvas, display, renderer => {
 }, pixelator(2));
 const game = new Game();
 async function loop() {
+    console.log(game.current_step);
     await game.update();
     return requestAnimationFrame(loop);
 }

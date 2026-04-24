@@ -1,59 +1,58 @@
 // @ts-check
-
+import { CHARACTER_CHOICES } from './constants.js';
+import { Spell } from './obtainables.js';
 export const damageReduction = 0;
 export const combatTimer = 100;
 
 // Character Stats and Inventory
 
-/**
- * @class Character
- */
-class Character {
+class Player {
     name;
-    maxLife;
+    max_life;
     health;
-    maxMana;
+    max_mana;
     mana;
-    maxStamina;
+    max_stamina;
     stamina;
-    staminaRegen;
-    manaRegen;
-    healthRegen;
+    stamina_regen;
+    mana_regen;
+    health_regen;
     luck;
-    blockChance;
-    damageReduction;
-    combatTimer;
-    extraLives;
+    block_chance;
+    damage_reduction;
+    combat_timer;
+    extra_lives;
     resistances;
     /** @type {any[]} */
     inventory;
-    /** @type {any[]} */
+    /** @type {Spell[]} */
     spells;
     equipped;
+    /** @type {(typeof CHARACTER_CHOICES)[keyof typeof CHARACTER_CHOICES]} */
     character;
 
     /**
      * @param {string} name
-     * @param {number} character
+     * @param {(typeof CHARACTER_CHOICES)[keyof typeof CHARACTER_CHOICES]} character
      */
     constructor(name, character) {
         this.name = name;
         this.character = character;
         // defaults
-        this.maxLife = 100;
-        this.health = this.maxLife;
-        this.maxMana = 50;
-        this.mana = this.maxMana;
-        this.maxStamina = 100;
-        this.stamina = this.maxStamina;
-        this.staminaRegen = 10;
-        this.manaRegen = 5;
-        this.healthRegen = 5;
+        this.max_life = 100;
+        this.health = this.max_life;
+        this.max_mana = 50;
+        this.mana = this.max_mana;
+        this.max_stamina = 100;
+        this.stamina = this.max_stamina;
+        this.stamina_regen = 10;
+        this.mana_regen = 5;
+        this.health_regen = 5;
         this.luck = 0;
-        this.blockChance = 0;
-        this.damageReduction = 0;
-        this.combatTimer = 100;
-        this.extraLives = 0;
+        this.block_chance = 0;
+        this.damage_reduction = 0;
+        this.combat_timer = 100;
+        this.extra_lives = 0;
         this.resistances = {
             burning: 0,
             blindness: 0,
@@ -62,21 +61,21 @@ class Character {
             shocked: 0,
             petrified: 0,
             rooted: 0,
-            weakness: 0,
+            weakness: 0
         };
         this.inventory = [];
         this.spells = [];
         this.equipped = {
             weapon: null,
             armor: null,
-            accessory: null,
+            accessory: null
         };
     }
 
     /**
      * @param {any} armorObj
      */
-    equipArmor(armorObj) {
+    equip(armorObj) {
         if (!armorObj) return alert('Wrong value error (equipArmor)');
         this.equipped.armor = armorObj;
         const attributes = armorObj.effects || [];
@@ -88,14 +87,13 @@ class Character {
      */
     applyAttributes(attributes) {
         // Safe guard
-        if (!attributes)
-            return alert("Wrong value error (applyAttributes)");
+        if (!attributes) return alert('Wrong value error (applyAttributes)');
         const attrs = Array.isArray(attributes) ? attributes : [attributes];
         for (const attr of attrs) {
             if (!attr) continue;
 
             // Object: key -> [value] / [min,max]
-            if (typeof attr === "object" && !Array.isArray(attr)) {
+            if (typeof attr === 'object' && !Array.isArray(attr)) {
                 for (const [k, v] of Object.entries(attr)) {
                     applyAttributeKey(this, k, v);
                 }
@@ -103,17 +101,17 @@ class Character {
             }
 
             // Special string patterns
-            if (typeof attr === "string") {
+            if (typeof attr === 'string') {
                 const s = attr.toLowerCase();
 
                 // Extra life
-                if (s.includes("extra life")) {
-                    this.extraLives += 1;
+                if (s.includes('extra life')) {
+                    this.extra_lives += 1;
                     continue;
                 }
 
                 // Luck +100
-                if (s.includes("luck")) {
+                if (s.includes('luck')) {
                     const m = s.match(/\+?(\d+)/);
                     if (m) {
                         const val = parseInt(m[1], 10);
@@ -123,14 +121,14 @@ class Character {
                 }
 
                 // 'resistance to all damage types +10%'
-                if (s.includes("resistance to all damage types")) {
+                if (s.includes('resistance to all damage types')) {
                     const m = s.match(/\+(\d+)%/);
-                    if (m) this.damageReduction += parseInt(m[1], 10);
+                    if (m) this.damage_reduction += parseInt(m[1], 10);
                     continue;
                 }
                 // All mana regen * 2 becomes health regen (Remove mana regen)
-                if (s.includes("becomes health regen")) {
-                    this.healthRegen = (this.manaRegen * 2);
+                if (s.includes('becomes health regen')) {
+                    this.health_regen = this.mana_regen * 2;
                     this.manaregen = 0;
                     continue;
                 }
@@ -140,9 +138,10 @@ class Character {
 }
 
 /**
- * @param {Character|any} self
- * @param {string} key
- * @param {any} value
+ * @template {keyof Player | keyof Player['resistances']} const K
+ * @param {Player} self
+ * @param {K} key
+ * @param {K extends keyof Player ? [Player[K], Player[K]] : K extends keyof Player['resistances'] ? [Player['resistances'][K], Player['resistances'][K]] : never} value
  */
 function applyAttributeKey(self, key, value) {
     const min = Math.min(Number(value[0]), Number(value[1]));
@@ -152,49 +151,36 @@ function applyAttributeKey(self, key, value) {
         ? Math.floor(Math.random() * (max - min + 1)) + min
         : Number(value);
     switch (key) {
-        case "lifeRegen":
-        case "healthRegen":
-            self.healthRegen += v;
+        case 'max_life':
+            self.max_life += v;
+            self.health = Math.min(self.health, self.max_life);
             break;
-        case "maxLife":
-            self.maxLife += v;
-            self.health = Math.min(self.health, self.maxLife);
+        case 'block_chance':
+            self.block_chance += v;
             break;
-        case "blockChance":
-            self.blockChance += v;
+        case 'max_mana':
+            self.max_mana += v;
+            self.mana = Math.min(self.mana, self.max_mana);
             break;
-        case "maxMana":
-            self.maxMana += v;
-            self.mana = Math.min(self.mana, self.maxMana);
+        case 'health_regen':
+        case 'block_chance':
+        case 'mana_regen':
+        case 'stamina_regen':
+        case 'combat_timer':
+        case 'damage_reduction':
+        case 'luck':
+            self[key] += v;
             break;
-        case "manaRegen":
-            self.manaRegen += v;
-            break;
-        case "maxStamina":
-            self.maxStamina += v;
-            self.stamina = Math.min(self.stamina, self.maxStamina);
-            break;
-        case "staminaRegen":
-            self.staminaRegen += v;
-            break;
-        case "luck":
-            self.luck += v;
-            break;
-        case "combatTimer":
-            self.combatTimer += v;
-            break;
-        case "damageReduction":
-            self.damageReduction += v;
+        case 'max_stamina':
+            self.max_stamina += v;
+            self.stamina = Math.min(self.stamina, self.max_stamina);
             break;
         default:
             // unknown key: store on resistances if it exists
             if (key in self.resistances) {
                 self.resistances[key] += v;
-            } else {
-                // attach as a generic property so data isn't lost
-                self[key] = (self[key] || 0) + v;
             }
     }
 }
 
-export { Character };
+export { Player as Character };

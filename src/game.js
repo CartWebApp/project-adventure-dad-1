@@ -5,7 +5,7 @@
  */
 class States {
     #flags = 0;
-    #masks = new Map;
+    #masks = new Map();
     /**
      * @param {T[]} keys
      */

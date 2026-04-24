@@ -136,6 +136,7 @@ const ATTR_COUNT_BY_RARITY = {
 };
 
 function buildarmorForRarity(rarity) {
+    return [];
     // Return rarities cascade up to target, ex: "epic" -> ["common","rare","epic"]
     function getCascadeRarities(target) {
         const order = ['common', 'rare', 'epic', 'legendary'];
@@ -219,6 +220,7 @@ function buildarmorForRarity(rarity) {
         for (const r of Object.keys(distribution)) {
             let needed = distribution[r] || 0;
             if (needed <= 0) continue;
+            console.log(ATTRIBUTES_BY_RARITY[r]);
             const pool = ATTRIBUTES_BY_RARITY[r] || [];
             if (pool.length === 0) continue;
 
@@ -352,9 +354,6 @@ class ItemBuilder extends BaseBuilder {
     constructor() {
         super(data => new Item(data), 'name', 'description', 'throwable', 'uses', 'edible_uses', 'value');
     }
-    build() {
-        return new Item(this.data);
-    }
 }
 
 class Weapon {
@@ -374,7 +373,7 @@ class WeaponBuilder extends BaseBuilder {
     }
 }
 
-class Spell {
+export class Spell {
     name;
     cast;
     effect;
@@ -654,7 +653,7 @@ const spells = [
         .with_name('Black Hole')
         .with_cast('battle')
         .with_effect({ type: 'areaSuck' })
-        .with_paramsByRarity({
+        .with_params_by_rarity({
             epic: { radius: 10, damagePerTick: 15 },
             legendary: { radius: 15, damagePerTick: 20 }
         })
@@ -664,14 +663,14 @@ const spells = [
         .with_name('Guardian Angel')
         .with_cast('anywhere')
         .with_effect({ type: 'guidance' })
-        .with_paramsByRarity({ legendary: { persistent: true } })
+        .with_params_by_rarity({ legendary: { persistent: true } })
         .with_mana_cost_by_rarity({ legendary: 100 })
         .build(),
     new SpellBuilder()
         .with_name('Magic Missile')
         .with_cast('battle/doors')
         .with_effect({ type: 'explosive' })
-        .with_paramsByRarity({
+        .with_params_by_rarity({
             common: { damage: 18 },
             rare: { damage: 22 },
             epic: { damage: 28 },
@@ -689,7 +688,7 @@ const spells = [
         .with_name('Earthquake')
         .with_cast('battle')
         .with_effect({ type: 'areaDamage', damage: 15 })
-        .with_paramsByRarity({
+        .with_params_by_rarity({
             rare: { durationMinutes: 1 },
             epic: { durationMinutes: 2.5 },
             legendary: { durationMinutes: 5 }
@@ -700,7 +699,7 @@ const spells = [
         .with_name('Curse of the Plague')
         .with_cast('battle')
         .with_effect({ type: 'randomEffect' })
-        .with_paramsByRarity({
+        .with_params_by_rarity({
             rare: { effectPercent: 10, duration: 30 },
             epic: { effectPercent: 10, duration: 40 },
             legendary: { effectPercent: 15, duration: 50 }
@@ -711,7 +710,7 @@ const spells = [
         .with_name("Zeus's Blessing")
         .with_cast('battle')
         .with_effect({ type: 'lightningStorm' })
-        .with_paramsByRarity({
+        .with_params_by_rarity({
             rare: { targets: 'enemies', durationMinutes: 2 },
             epic: { targets: 'enemies', durationMinutes: 4 },
             legendary: { targets: 'enemies', durationMinutes: 8 }
@@ -722,14 +721,14 @@ const spells = [
         .with_name('Godlike')
         .with_cast('battle')
         .with_effect({ type: 'omniBuff' })
-        .with_paramsByRarity({ legendary: { durationSeconds: 20 } })
+        .with_params_by_rarity({ legendary: { durationSeconds: 20 } })
         .with_mana_cost_by_rarity({ legendary: 80 })
         .build(),
     new SpellBuilder()
         .with_name('Bloody Exchange')
         .with_cast('battle')
         .with_effect({ type: 'healthTrade' })
-        .with_paramsByRarity({
+        .with_params_by_rarity({
             rare: { percent: 20 },
             epic: { percent: 50 },
             legendary: { percent: 80 }
@@ -740,7 +739,7 @@ const spells = [
         .with_name('Blessing of Life')
         .with_cast('anywhere')
         .with_effect({ type: 'fullRegen' })
-        .with_paramsByRarity({
+        .with_params_by_rarity({
             epic: { castTimeSeconds: 90 },
             legendary: { castTimeSeconds: 45 }
         })
@@ -750,7 +749,7 @@ const spells = [
         .with_name('Fireball')
         .with_cast('battle')
         .with_effect({ type: 'explosiveWithBurn' })
-        .with_paramsByRarity({
+        .with_params_by_rarity({
             common: { damage: 5, burnSeconds: 4 },
             rare: { damage: 8, burnSeconds: 8 },
             epic: { damage: 12, burnSeconds: 10 },
@@ -762,7 +761,7 @@ const spells = [
         .with_name('Raise Dead')
         .with_cast('battle')
         .with_effect({ type: 'summon' })
-        .with_paramsByRarity({
+        .with_params_by_rarity({
             rare: { count: 2 },
             epic: { count: 6 },
             legendary: { count: 8 }

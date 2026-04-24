@@ -1,7 +1,9 @@
 import { Renderer } from './renderer.js';
 import { pixelator } from './utils.js';
 
-const ui_canvas = /** @type {HTMLCanvasElement} */ (document.querySelector('canvas.ui'));
+const ui_canvas = /** @type {HTMLCanvasElement} */ (
+    document.querySelector('canvas.ui')
+);
 ui_canvas.style.opacity = '1';
 ui_canvas.style.display = 'none';
 ui_canvas.height = window.innerHeight;
@@ -28,10 +30,14 @@ function join(...fns) {
             fns[i]();
         }
         return /** @type {(...args: I) => O} */ (fns[fns.length - 1])(...args);
-    }
+    };
 }
 
-const renderer = new Renderer.Offscreen(ui_canvas, display, join(cursor, pixelator(1)));
+const renderer = new Renderer.Offscreen(
+    ui_canvas,
+    display,
+    join(cursor, pixelator(1))
+);
 display.addEventListener('click', () => {
     display.requestPointerLock();
 });
@@ -51,19 +57,24 @@ function cursor() {
     renderer.ctx.strokeStyle = 'white';
     renderer.ctx.lineWidth = 6;
     const { mouse_x: x, mouse_y: y } = renderer;
-    renderer.polygon({
-        x: x - 6,
-        y: y - 10
-    }, {
-        x: x - 6,
-        y: y + 8
-    }, {
-        x: x,
-        y: y + 4
-    }, {
-        x: x + 4,
-        y: y + 5
-    });
+    renderer.polygon(
+        {
+            x: x - 6,
+            y: y - 10,
+        },
+        {
+            x: x - 6,
+            y: y + 8,
+        },
+        {
+            x: x,
+            y: y + 4,
+        },
+        {
+            x: x + 4,
+            y: y + 5,
+        }
+    );
     renderer.ctx.restore();
 }
 
@@ -85,7 +96,11 @@ function split_lines(text) {
             i += emoji[0].length - 1;
             continue;
         }
-        if (text.charAt(i) === '\n' || width >= renderer.width * 0.35 || width >= renderer.width * 0.3 && text.charAt(i - 1) === ' ') {
+        if (
+            text.charAt(i) === '\n' ||
+            width >= renderer.width * 0.35 ||
+            (width >= renderer.width * 0.3 && text.charAt(i - 1) === ' ')
+        ) {
             lines.push(text.charAt(i));
         } else {
             lines[lines.length - 1] += text.charAt(i);
@@ -130,14 +145,24 @@ export function select(text, choices, render_icon = () => {}) {
             renderer.ctx.strokeStyle = 'white';
             renderer.ctx.lineWidth = 2;
             renderer.ctx.fillStyle = 'black';
-            renderer.ctx.roundRect(renderer.width * 0.4, renderer.height * 0.6, renderer.width * 0.5, renderer.height * 0.2, 15);
+            renderer.ctx.roundRect(
+                renderer.width * 0.4,
+                renderer.height * 0.6,
+                renderer.width * 0.5,
+                renderer.height * 0.2,
+                15
+            );
             renderer.ctx.fill();
             // renderer.rect(renderer.width * 0.05, renderer.height * 0.5, renderer.width * 0.9, renderer.height * 0.18);
             renderer.ctx.stroke();
             renderer.ctx.save();
-            render_icon(renderer, renderer.width * 0.415, renderer.height * 0.7);
+            render_icon(
+                renderer,
+                renderer.width * 0.415,
+                renderer.height * 0.7
+            );
             renderer.ctx.restore();
-    
+
             renderer.ctx.fillStyle = 'white';
             let y = renderer.height * 0.65;
             const lines = split_lines(text);
@@ -146,11 +171,15 @@ export function select(text, choices, render_icon = () => {}) {
                 let current_line = 0;
                 while (rendered.join('\n') !== lines.join('\n')) {
                     if (rendered[current_line] !== lines[current_line]) {
-                        const emoji = lines[current_line].slice(rendered[current_line].length).match(/^\p{Extended_Pictographic}/u);
+                        const emoji = lines[current_line]
+                            .slice(rendered[current_line].length)
+                            .match(/^\p{Extended_Pictographic}/u);
                         if (emoji) {
                             rendered[current_line] += emoji[0];
                         } else {
-                            rendered[current_line] += lines[current_line].charAt(rendered[current_line].length);
+                            rendered[current_line] += lines[
+                                current_line
+                            ].charAt(rendered[current_line].length);
                         }
                     } else if (current_line < lines.length - 1) {
                         rendered.push('');
@@ -165,26 +194,44 @@ export function select(text, choices, render_icon = () => {}) {
                 y += 22 * lines.length;
             } else {
                 for (const line of lines) {
-                    renderer.text(line, renderer.width * 0.5, y, renderer.width * 0.38);
+                    renderer.text(
+                        line,
+                        renderer.width * 0.5,
+                        y,
+                        renderer.width * 0.38
+                    );
                     y += 22;
                 }
             }
-            const offset = Math.max(...choices.map(choice => renderer.ctx.measureText(choice).width / 2))
+            const offset = Math.max(
+                ...choices.map(
+                    choice => renderer.ctx.measureText(choice).width / 2
+                )
+            );
             for (let i = 0; i < choices.length; i++) {
-                const level = y += 22;
+                const level = (y += 22);
                 if (i === current_choice) {
-                    renderer.polygon({
-                        x: renderer.width * 0.5 - offset,
-                        y: level - 11
-                    }, {
-                        x: renderer.width * 0.5 - offset - 15,
-                        y: level - 18
-                    }, {
-                        x: renderer.width * 0.5 - offset - 15,
-                        y: level - 2
-                    });
+                    renderer.polygon(
+                        {
+                            x: renderer.width * 0.5 - offset,
+                            y: level - 11,
+                        },
+                        {
+                            x: renderer.width * 0.5 - offset - 15,
+                            y: level - 18,
+                        },
+                        {
+                            x: renderer.width * 0.5 - offset - 15,
+                            y: level - 2,
+                        }
+                    );
                 }
-                renderer.text(choices[i], renderer.width * 0.5, level, renderer.width * 0.3);
+                renderer.text(
+                    choices[i],
+                    renderer.width * 0.5,
+                    level,
+                    renderer.width * 0.3
+                );
             }
         });
         if (resolved) {
@@ -205,7 +252,13 @@ function render_frame(lines, render_icon) {
     renderer.ctx.strokeStyle = 'white';
     renderer.ctx.lineWidth = 2;
     renderer.ctx.fillStyle = 'black';
-    renderer.ctx.roundRect(renderer.width * 0.4, renderer.height * 0.6, renderer.width * 0.5, renderer.height * 0.2, 15);
+    renderer.ctx.roundRect(
+        renderer.width * 0.4,
+        renderer.height * 0.6,
+        renderer.width * 0.5,
+        renderer.height * 0.2,
+        15
+    );
     renderer.ctx.fill();
     // renderer.rect(renderer.width * 0.05, renderer.height * 0.5, renderer.width * 0.9, renderer.height * 0.18);
     renderer.ctx.stroke();
@@ -233,7 +286,13 @@ export async function dialog(text, render_icon = () => {}) {
         renderer.ctx.strokeStyle = 'white';
         renderer.ctx.lineWidth = 2;
         renderer.ctx.fillStyle = 'black';
-        renderer.ctx.roundRect(renderer.width * 0.4, renderer.height * 0.6, renderer.width * 0.5, renderer.height * 0.2, 15);
+        renderer.ctx.roundRect(
+            renderer.width * 0.4,
+            renderer.height * 0.6,
+            renderer.width * 0.5,
+            renderer.height * 0.2,
+            15
+        );
         renderer.ctx.fill();
         // renderer.rect(renderer.width * 0.05, renderer.height * 0.5, renderer.width * 0.9, renderer.height * 0.18);
         renderer.ctx.stroke();
@@ -242,17 +301,21 @@ export async function dialog(text, render_icon = () => {}) {
         renderer.ctx.restore();
 
         renderer.ctx.fillStyle = 'white';
-        
+
         const lines = split_lines(text);
         const rendered = [''];
         let current_line = 0;
         while (rendered.join('\n') !== lines.join('\n')) {
             if (rendered[current_line] !== lines[current_line]) {
-                const emoji = lines[current_line].slice(rendered[current_line].length).match(/^\p{Extended_Pictographic}/u);
+                const emoji = lines[current_line]
+                    .slice(rendered[current_line].length)
+                    .match(/^\p{Extended_Pictographic}/u);
                 if (emoji) {
                     rendered[current_line] += emoji[0];
                 } else {
-                    rendered[current_line] += lines[current_line].charAt(rendered[current_line].length);
+                    rendered[current_line] += lines[current_line].charAt(
+                        rendered[current_line].length
+                    );
                 }
             } else if (current_line < lines.length - 1) {
                 rendered.push('');
@@ -275,7 +338,13 @@ export function static_dialog(text) {
         renderer.ctx.strokeStyle = 'white';
         renderer.ctx.lineWidth = 2;
         renderer.ctx.fillStyle = 'black';
-        renderer.ctx.roundRect(renderer.width * 0.4, renderer.height * 0.6, renderer.width * 0.5, renderer.height * 0.2, 15);
+        renderer.ctx.roundRect(
+            renderer.width * 0.4,
+            renderer.height * 0.6,
+            renderer.width * 0.5,
+            renderer.height * 0.2,
+            15
+        );
         renderer.ctx.fill();
         // renderer.rect(renderer.width * 0.05, renderer.height * 0.5, renderer.width * 0.9, renderer.height * 0.18);
         renderer.ctx.stroke();
@@ -288,7 +357,11 @@ export function static_dialog(text) {
         for (let i = 0; i < text.length; i++) {
             const line = lines[lines.length - 1];
             const width = renderer.ctx.measureText(line).width;
-            if (text.charAt(i) === '\n' || width >= renderer.width * 0.35 || width >= renderer.width * 0.3 && text.charAt(i - 1) === ' ') {
+            if (
+                text.charAt(i) === '\n' ||
+                width >= renderer.width * 0.35 ||
+                (width >= renderer.width * 0.3 && text.charAt(i - 1) === ' ')
+            ) {
                 lines.push(text.charAt(i));
             } else {
                 lines[lines.length - 1] += text.charAt(i);

@@ -1,5 +1,6 @@
+import { Character } from './character.js';
 import { Entity } from './combat.js';
-import { STATES } from './constants.js';
+import { CHARACTER_CHOICES, STATES } from './constants.js';
 import { Game } from './game.js';
 import { select } from './ui.js';
 
@@ -74,6 +75,7 @@ class Branch extends Step {
     async execute(game) {
         const branch = this.branches[await this.determiner(game)];
         await branch.execute(game);
+        this.next = branch.next;
     }
 
     /**
@@ -159,16 +161,16 @@ class Battle extends Step {
 }
 
 Game.story = new Branch(async () => {
-    const choice = await select('What character do you prefer?', ['Knight', 'Slave', 'Beggar']);
-    return choice === 'Knight' ? 0 : choice === 'Slave' ? 1 : 2;
+    const choice = await select('What character do you prefer?', ['Knight', 'Beggar', 'Slave']);
+    return choice === 'Knight' ? 0 : choice === 'Beggar' ? 1 : 2;
 }).with_branches(
     new Execute(game => {
-        game.player;
+        game.player = new Character('', CHARACTER_CHOICES.KNIGHT);
     }),
     new Execute(game => {
-
+        game.player = new Character('', CHARACTER_CHOICES.BEGGAR);
     }),
     new Execute(game => {
-
+        game.player = new Character('', CHARACTER_CHOICES.SLAVE);
     })
-).then(new Step())
+);

@@ -3,7 +3,7 @@
         "strict": true,
         "allowJs": true,
         "checkJs": true,
-        "module": "esnext",
+        "module": "es2022",
         "allowUnreachableCode": false,
         "allowUnusedLabels": false,
         "target": "esnext",
