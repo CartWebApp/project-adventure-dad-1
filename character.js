@@ -125,7 +125,8 @@ class Character {
                     if (m) this.damageReduction += parseInt(m[1], 10);
                     continue;
                 }
-                if (s.includes("'All mana regen *2 becomes health regen (remove mana regen)")) {
+                // All mana regen * 2 becomes health regen (Remove mana regen)
+                if (s.includes("becomes health regen")) {
                     this.healthRegen = (this.manaRegen * 2);
                     this.manaregen = 0;
                     continue;
