@@ -1,5 +1,8 @@
 /** @import { Step } from './story.js' */
 
+import { RaytracingRenderer } from './raytracing.js';
+import { Renderer } from './renderer.js';
+
 /**
  * @template T
  */
@@ -41,8 +44,21 @@ export class Game {
     player;
     /** @type {Step | null} */
     current_step = null;
-    constructor() {
+    /** @type {RaytracingRenderer} */
+    renderer;
+    /**
+     * @param {RaytracingRenderer} renderer
+     */
+    constructor(renderer) {
+        this.renderer = renderer;
         this.current_step = Game.story;
+        while (this.current_step?.prev || this.current_step?.parent) {
+            if (this.current_step.prev !== null) {
+                this.current_step = this.current_step.prev;
+            } else if (this.current_step.parent !== null) {
+                this.current_step = this.current_step.parent;
+            }
+        }
     }
 
     async update() {

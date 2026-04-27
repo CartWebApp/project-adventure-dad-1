@@ -38,6 +38,9 @@ const renderer = new Renderer.Offscreen(
     display,
     join(cursor, pixelator(1))
 );
+
+renderer.ctx.fillStyle = 'white';
+renderer.ctx.font = '22px monospace, Noto Color Emoji';
 display.addEventListener('click', () => {
     display.requestPointerLock();
 });
@@ -60,19 +63,19 @@ function cursor() {
     renderer.polygon(
         {
             x: x - 6,
-            y: y - 10,
+            y: y - 10
         },
         {
             x: x - 6,
-            y: y + 8,
+            y: y + 8
         },
         {
             x: x,
-            y: y + 4,
+            y: y + 4
         },
         {
             x: x + 4,
-            y: y + 5,
+            y: y + 5
         }
     );
     renderer.ctx.restore();
@@ -214,15 +217,15 @@ export function select(text, choices, render_icon = () => {}) {
                     renderer.polygon(
                         {
                             x: renderer.width * 0.5 - offset,
-                            y: level - 11,
+                            y: level - 11
                         },
                         {
                             x: renderer.width * 0.5 - offset - 15,
-                            y: level - 18,
+                            y: level - 18
                         },
                         {
                             x: renderer.width * 0.5 - offset - 15,
-                            y: level - 2,
+                            y: level - 2
                         }
                     );
                 }
@@ -277,10 +280,9 @@ function render_frame(lines, render_icon) {
 /**
  * @param {string} text
  * @param {(renderer: Renderer, x: number, y: number) => void} [render_icon]
+ * @param {number} [per_letter_duration]
  */
-export async function dialog(text, render_icon = () => {}) {
-    renderer.ctx.fillStyle = 'white';
-    renderer.ctx.font = '22px monospace, Noto Color Emoji';
+export async function dialog(text, render_icon = () => {}, per_letter_duration = 75) {
     await renderer.batch_async(async () => {
         renderer.clear();
         renderer.ctx.strokeStyle = 'white';
@@ -324,7 +326,7 @@ export async function dialog(text, render_icon = () => {}) {
             renderer.batch(() => {
                 render_frame(rendered, render_icon);
             });
-            await new Promise(resolve => setTimeout(resolve, 75));
+            await new Promise(resolve => setTimeout(resolve, per_letter_duration));
         }
     });
 }
@@ -352,7 +354,6 @@ export function static_dialog(text) {
 
         renderer.ctx.fillStyle = 'white';
         let y = renderer.height * 0.65;
-        const measure = renderer.ctx.measureText(text);
         const lines = [''];
         for (let i = 0; i < text.length; i++) {
             const line = lines[lines.length - 1];
@@ -372,4 +373,120 @@ export function static_dialog(text) {
             y += 20;
         }
     });
+}
+
+/**
+ * @template {string} T
+ * @param {string} text
+ * @param {(input: string) => input is T & string} [validator]
+ * @param {number} [max_length]
+ * @returns {Promise<T>}
+ */
+export async function input(
+    text,
+    validator = /** @type {(input: string) => input is T} */ (
+        input => typeof input === 'string'
+    ),
+    max_length = 15
+) {
+    const { promise, resolve } = Promise.withResolvers();
+    let value = '';
+    let resolved = false;
+    /**
+     * @param {KeyboardEvent} e
+     */
+    function handler(e) {
+        if (e.key === 'Enter') {
+            if (validator(value)) {
+                removeEventListener('keydown', handler);
+                resolved = true;
+                resolve(value);
+            } else {
+                shake = 50;
+            }
+        } else if (e.key === 'Backspace') {
+            value = value.slice(0, value.length - 1);
+        } else if (e.key.length === 1) {
+            if (max_length === value.length) {
+                shake = 50;
+            } else {
+                value += e.key;
+            }
+        }
+    }
+    let shake = 0;
+    let cursor = 0;
+    let init = true;
+    addEventListener('keydown', handler);
+    async function frame() {
+        await renderer.batch_async(async () => {
+            renderer.clear();
+            renderer.ctx.strokeStyle = 'white';
+            renderer.ctx.lineWidth = 2;
+            renderer.ctx.fillStyle = 'black';
+            renderer.ctx.roundRect(
+                renderer.width * 0.4,
+                renderer.height * 0.6,
+                renderer.width * 0.5,
+                renderer.height * 0.2,
+                15
+            );
+            renderer.ctx.fill();
+            renderer.ctx.stroke();
+            renderer.ctx.fillStyle = 'white';
+            let y = renderer.height * 0.65;
+            const lines = split_lines(text);
+            if (init !== false) {
+                const rendered = [''];
+                let current_line = 0;
+                while (rendered.join('\n') !== lines.join('\n')) {
+                    if (rendered[current_line] !== lines[current_line]) {
+                        const emoji = lines[current_line]
+                            .slice(rendered[current_line].length)
+                            .match(/^\p{Extended_Pictographic}/u);
+                        if (emoji) {
+                            rendered[current_line] += emoji[0];
+                        } else {
+                            rendered[current_line] += lines[
+                                current_line
+                            ].charAt(rendered[current_line].length);
+                        }
+                    } else if (current_line < lines.length - 1) {
+                        rendered.push('');
+                        current_line++;
+                    }
+                    renderer.batch(() => {
+                        render_frame(rendered, () => {});
+                    });
+                    await new Promise(resolve => setTimeout(resolve, 75));
+                }
+                init = false;
+            }
+            for (const line of lines) {
+                renderer.text(
+                    line,
+                    renderer.width * 0.5,
+                    y,
+                    renderer.width * 0.3
+                );
+                y += 20;
+            }
+            let x = renderer.width * 0.5;
+            if (shake > 0) {
+                x += Math.sin(shake-- / 4) * (shake / 2);
+            }
+            renderer.text(
+                value + (shake === 0 && Math.sin(cursor / 8) > 0 ? '_' : ''),
+                x,
+                (y += 20),
+                renderer.width * 0.3
+            );
+            cursor++;
+        });
+        if (!resolved) {
+            return requestAnimationFrame(frame);
+        }
+    }
+    await frame();
+    return promise;
 }

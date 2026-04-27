@@ -172,7 +172,7 @@ class Renderer {
         }
 
         /**
-         * @param {string} color
+         * @param {string | CanvasGradient | CanvasPattern} color
          */
         background(color) {
             super.background(color);
@@ -336,7 +336,7 @@ class Renderer {
     }
 
     /**
-     * @param {string} color
+     * @param {string | CanvasGradient | CanvasPattern} color
      */
     background(color) {
         const prev_fill_style = this.ctx.fillStyle;

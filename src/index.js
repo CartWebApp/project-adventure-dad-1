@@ -1,4 +1,4 @@
-
+// @ts-check
 import { RaytracingRenderer } from './raytracing.js';
 import { pixelator } from './utils.js';
 const { Game } = await import('./game.js').then(async res => {
@@ -25,9 +25,11 @@ window.addEventListener('resize', () => {
 const renderer = new RaytracingRenderer(canvas, display, renderer => {
     renderer.background('black');
 }, pixelator(2));
-const game = new Game();
+const game = new Game(renderer);
 async function loop() {
-    console.log(game.current_step);
+    if (game.current_step === null) {
+        return;
+    }
     await game.update();
     return requestAnimationFrame(loop);
 }

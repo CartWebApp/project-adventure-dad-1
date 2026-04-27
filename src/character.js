@@ -183,4 +183,4 @@ function applyAttributeKey(self, key, value) {
     }
 }
 
-export { Player as Character };
+export { Player };
