@@ -5,6 +5,7 @@ export const TREE_HEIGHT = 400;
 export const TREE_TRUNK_HEIGHT = 50;
 export const TREE_WIDTH = 100;
 export const GRASS_COLOR = '#295c1b';
+export const DARKER_GRASS_COLOR = '#152c0a'
 export const BENCHMARKING = false;
 export const STATES = /** @type {const} */ ({
     TRAVEL: 1,

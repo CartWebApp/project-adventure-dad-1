@@ -1,7 +1,6 @@
-/** @import { Step } from './story.js' */
-
+import { Player } from './character.js';
 import { RaytracingRenderer } from './raytracing.js';
-import { Renderer } from './renderer.js';
+import { Step, story } from './story.js';
 
 /**
  * @template T
@@ -39,18 +38,28 @@ class Dialogue {
 }
 
 export class Game {
+    /** @type {Game} */
+    static current;
     /** @type {Step} */
-    static story;
+    static story = story;
+    /** @type {Player} */
     player;
     /** @type {Step | null} */
     current_step = null;
     /** @type {RaytracingRenderer} */
     renderer;
+    /** @type {number[]} */
+    step_sequence = [];
     /**
      * @param {RaytracingRenderer} renderer
      */
     constructor(renderer) {
+        Game.current ??= this;
         this.renderer = renderer;
+        this.load();
+        if (this.current_step !== null) {
+            return;
+        }
         this.current_step = Game.story;
         while (this.current_step?.prev || this.current_step?.parent) {
             if (this.current_step.prev !== null) {
@@ -66,6 +75,24 @@ export class Game {
             return;
         }
         await this.current_step.execute(this);
+        this.step_sequence.push(this.current_step.id);
         this.current_step = this.current_step.next;
+        this.save();
+    }
+
+    save() {
+        localStorage.game = JSON.stringify({
+            steps: this.step_sequence,
+            player: this.player
+        });
+    }
+
+    load() {
+        if (localStorage.game !== undefined) {
+            const { player, steps } = JSON.parse(localStorage.game);
+            this.player = Object.assign(new Player('', 1), player);
+            this.step_sequence = steps;
+            this.current_step = Step.goto(/** @type {number} */ (this.step_sequence.pop()));
+        }
     }
 }

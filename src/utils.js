@@ -42,6 +42,84 @@ function inside(point, vertices) {
 
     return inside;
 };
+
+
+/**
+ * @param {number} radius
+ */
+export function circle(radius, step = 1) {
+    let center = {
+        x: radius,
+        y: radius,
+    };
+    const points = [];
+    for (let i = 0; i < 360; i += step) {
+        const angle = (i / 180) * Math.PI;
+        const x = center.x + radius * Math.cos(angle);
+        const y = center.y + radius * Math.sin(angle);
+        points.push({
+            x,
+            y,
+        });
+    }
+    // console.log({ points });
+    return points;
+}
+
+/**
+ * @param {number} start
+ * @param {number} end
+ * @param {number} degree
+ */
+export function interpolate(start, end, degree) {
+    const delta = degree * (end - start);
+    return start + delta;
+}
+
+export class InterpolatingDoubleTreeMap {
+    /** @type {Array<[number, number]>} */
+    #entries = [];
+    /**
+     * @param {number} key
+     * @param {number} value
+     */
+    set(key, value) {
+        const index = this.#entries.findIndex(([k]) => key === k);
+        if (index !== -1) {
+            this.#entries[index][1] = value;
+        } else {
+            this.#entries.push([key, value]);
+        }
+    }
+
+    /**
+     * @param {number} key
+     */
+    get(key) {
+        const found = this.#entries.find(([k]) => k === key);
+        if (typeof found === 'object') {
+            return found[1];
+        }
+        const lower_half = this.#entries.filter(([k]) => k < key).toSorted(([a], [b]) => a - b);
+        const upper_half = this.#entries.filter(([k]) => k > key).toSorted(([a], [b]) => a - b);
+        const lower = lower_half.at(-1);
+        const upper = upper_half[0];
+        if (upper === undefined && lower === undefined) {
+            return 0;
+        }
+        if (upper === undefined) {
+            return Infinity;
+        }
+        if (lower === undefined) {
+            return -Infinity;
+        }
+        const a = lower[0];
+        const b = upper[0];
+        const degree = (key - a) / (b - a);
+        return interpolate(lower[1], upper[1], degree);
+    }
+}
+
 /**
  * Given an array of `Entity`s with coordinates, the `InterpolatingEntityMap` allows you to determine what entity is at a given point. 
  */

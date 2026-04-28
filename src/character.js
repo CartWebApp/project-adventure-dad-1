@@ -71,6 +71,11 @@ class Player {
             accessory: null
         };
     }
+    
+    toJSON() {
+        const { equip, applyAttributes, ...props} = this;
+        return props;
+    }
 
     /**
      * @param {any} armorObj

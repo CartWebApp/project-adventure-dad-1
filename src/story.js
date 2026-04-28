@@ -2,8 +2,9 @@ import { Player } from './character.js';
 import { Entity } from './combat.js';
 import { CHARACTER_CHOICES, STATES } from './constants.js';
 import { Game } from './game.js';
+import { Ground, Sun, Tree } from './objects.js';
 import { Renderer } from './renderer.js';
-import { dialog, input, select } from './ui.js';
+import { clear, dialog, input, select } from './ui.js';
 
 export class Step {
     /** @type {(typeof STATES)[keyof typeof STATES]} */
@@ -18,6 +19,19 @@ export class Step {
     head = null;
     /** @type {Step | null} */
     tail = null;
+    static id = 0;
+    id = Step.id++;
+    /** @type {Step[]} */
+    static #steps = [];
+    constructor() {
+        Step.#steps[this.id] = this;
+    }
+    /**
+     * @param {number} id
+     */
+    static goto(id) {
+        return this.#steps[id];
+    }
 
     /**
      * @param {Game} game
@@ -290,8 +304,7 @@ class Delayed extends Step {
 }
 
 localStorage.name ??= '';
-
-Game.story = new Parallel(
+export const story = new Parallel(
     new Input('Choose a name.')
         .with_validator(
             // @ts-expect-error
@@ -367,9 +380,22 @@ Game.story = new Parallel(
                 }
             }),
             new Dialog(
-                `Excellent choice${'​'.repeat(10)}.${'​'.repeat(
+                `Excellent choice${'​'.repeat(5)}.${'​'.repeat(7)}.${'​'.repeat(
                     10
-                )}.${'​'.repeat(10)}.`
+                )}.`
             ).with_overall_duration(2500)
+        )
+    )
+    .then(
+        new Parallel(
+            new Execute(async ({ renderer }) => {
+                renderer.batch(() => {
+                    clear();
+                    renderer.clear();
+                    renderer.entity(new Ground(), 0, 0);
+                    renderer.entity(new Sun(), renderer.width * 0.9, renderer.height * 0.1);
+                    renderer.entity(new Tree(), renderer.width * 0.9, 0);
+                });
+            })
         )
     );

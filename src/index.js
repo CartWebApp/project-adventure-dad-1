@@ -5,7 +5,9 @@ const { Game } = await import('./game.js').then(async res => {
     await import('./story.js');
     return res;
 });
-const canvas = /** @type {HTMLCanvasElement} */ (document.querySelector('canvas.raytraced'));
+const canvas = /** @type {HTMLCanvasElement} */ (
+    document.querySelector('canvas.raytraced')
+);
 canvas.style.opacity = '1';
 canvas.style.display = 'none';
 canvas.height = window.innerHeight;
@@ -22,9 +24,12 @@ window.addEventListener('resize', () => {
     display.width = window.innerWidth / 2;
     renderer.refresh();
 });
-const renderer = new RaytracingRenderer(canvas, display, renderer => {
-    renderer.background('black');
-}, pixelator(2));
+const renderer = new RaytracingRenderer(
+    canvas,
+    display,
+    renderer => renderer.background('black'),
+    pixelator(2)
+);
 const game = new Game(renderer);
 async function loop() {
     if (game.current_step === null) {

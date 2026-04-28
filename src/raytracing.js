@@ -1,6 +1,10 @@
 /// <reference lib="es2023" />
 import { Renderer } from './renderer.js';
-import { InterpolatingEntityMap } from './utils.js';
+import {
+    interpolate,
+    InterpolatingDoubleTreeMap,
+    InterpolatingEntityMap
+} from './utils.js';
 
 // i wish js had interfaces, this would make this so much easier
 // (and also get rid of the overhead that comes with inheritance)
@@ -21,7 +25,7 @@ export class Entity {
         /** the ending angle of the light arc, an integer between 0 and 360 greater than the `start_angle` */
         end_angle: 0,
         /** how much light is absorbed by the entity, a number between 0 and 1 */
-        absorption: 0,
+        absorption: 0
     };
     /**
      * @param {Renderer} renderer
@@ -75,7 +79,7 @@ function center(...points) {
     const y_points = points.map(({ y }) => y);
     return {
         x: (Math.min(...x_points) + Math.max(...x_points)) / 2,
-        y: (Math.min(...y_points) + Math.max(...y_points)) / 2,
+        y: (Math.min(...y_points) + Math.max(...y_points)) / 2
     };
 }
 
@@ -87,7 +91,7 @@ function center(...points) {
 function slope(origin, point) {
     return /** @type {[number, number]} */ ([
         point.y - origin.y,
-        point.x - origin.x,
+        point.x - origin.x
     ]);
 }
 
@@ -129,6 +133,14 @@ function slice(points, start, end) {
 }
 
 /**
+ * @param {{ x: number; y: number }} start
+ * @param {{ x: number; y: number }} end
+ */
+function delta(start, end) {
+    return Math.sqrt((end.x - start.x) ** 2 + (end.y - start.y) ** 2);
+}
+
+/**
  * An extension of the offscreen renderer with raytracing capabilities.
  * Unlike `Renderer` and `Renderer.Offscreen`, the `RaytracingRenderer` is best used with the `Entity` class, which provides lighting information.
  * With this, you can define light sources and how various elements react to and transform light that passes through them.
@@ -151,6 +163,9 @@ export class RaytracingRenderer extends Renderer.Offscreen {
     ) {
         super(offscreen, display, render_pass);
         this.#background = background;
+        this.#light_dissipation.set(10, 0.99);
+        this.#light_dissipation.set(50, 0.995);
+        this.#light_dissipation.set(100, 0.998505);
     }
     #queued_render = false;
     /** @type {Array<{ x: number; y: number; entity: Entity }>} */
@@ -159,7 +174,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
     #background;
 
     /** how much precision to use for raytracing */
-    precision = 4;
+    precision = 20;
 
     /** Promise that resolves when rendering has completed */
     promise = Promise.resolve();
@@ -310,6 +325,13 @@ export class RaytracingRenderer extends Renderer.Offscreen {
 
     /** @type {Array<{ x: number; y: number }> | null} */
     #last_points = null;
+    /** @type {Array<{ x: number; y: number }> | null} */
+    #prev_last_points = null;
+    #light_dissipation = new InterpolatingDoubleTreeMap();
+    /** @type {number[] | null} */
+    #last_lighting_level = null;
+    /** @type {number[] | null} */
+    #prev_last_lighting_level = null;
 
     /**
      * @param {Entity} parent_entity
@@ -330,7 +352,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
             return;
         }
         // console.log(points);
-        this.ctx.lineWidth = 5;
+        this.ctx.lineWidth = 1;
         const gradient = this.ctx.createLinearGradient(
             points[0].x,
             points[0].y,
@@ -343,22 +365,60 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         path.moveTo(points[0].x, points[0].y);
         let index = -1;
         let light_index = -1;
+        let prev_lighting = lighting;
+        const level = [];
         for (const point of points) {
             index++;
             if (!shading) {
                 light_index++;
             }
-            // console.log(parent_entity, lit_entity);
+            level.push(lighting.level);
+            
+            prev_lighting = { ...lighting };
+            
             const { x, y } = point;
+            const entity = this.#map.get(x, y);
+            if (entity !== null && entity.entity !== parent_entity) {
+                console.log(entity, x, y);
+                if (shadow === null) {
+                    shadow = lighting.level;
+                    lit_entity = entity;
+                }
+                lighting.level -=
+                    lighting.level * entity.entity.lighting.absorption;
+            }
+            if (+lighting.level.toFixed(2) === 0) {
+                shading = true;
+                // this.ctx.strokeStyle = gradient;
+                // this.ctx.stroke(path);
+                continue;
+                // break;
+            }
+            lighting.level *= this.#light_dissipation.get(this.precision);
+            // lighting.level -= (lighting.level * Math.hypot(this.width, this.height));
+            // if (!shading) {
+            gradient.addColorStop(
+                points.indexOf(point) / (points.length - 1),
+                this.#serialize_color(...lighting.hue, lighting.level)
+            );
+            // console.log(parent_entity, lit_entity);
             if (!shading) {
                 path.lineTo(x, y);
                 if (
                     this.#last_points !== null &&
+                    index < this.#last_points.length
+                ) {
+                    // console.log(delta(point, this.#last_points[index]));
+                }
+                if (
+                    this.#last_points !== null &&
+                    this.#last_lighting_level !== null &&
                     index > 0 &&
-                    this.#last_points.length > index
+                    this.#last_points.length > index &&
+                    delta(point, this.#last_points[index]) > 1 / (index * 5)
                 ) {
                     const fill = new Path2D();
-                    fill.moveTo(x, y);
+                    fill.moveTo(x + 0.2, y + 0.2);
                     fill.lineTo(
                         this.#last_points[index].x,
                         this.#last_points[index].y
@@ -367,16 +427,61 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                         this.#last_points[index - 1].x,
                         this.#last_points[index - 1].y
                     );
-                    fill.lineTo(points[index - 1].x, points[index - 1].y);
-                    fill.lineTo(x, y);
+                    fill.lineTo(
+                        points[index - 1].x + 0.2,
+                        points[index - 1].y + 0.2
+                    );
+                    fill.lineTo(x + 0.2, y + 0.2);
                     this.ctx.fillStyle = this.#serialize_color(
                         ...lighting.hue,
-                        lighting.level
+                        interpolate(
+                            interpolate(
+                                lighting.level,
+                                level[level.length - 2],
+                                0.5
+                            ),
+                            this.#last_lighting_level[index],
+                            0.5
+                        )
+                    );
+                    this.ctx.fill(fill);
+                } else if (
+                    this.#prev_last_points !== null &&
+                    this.#prev_last_lighting_level !== null &&
+                    index > 0 &&
+                    this.#prev_last_points.length > index &&
+                    delta(point, this.#prev_last_points[index]) > 1 / (index * 5)
+                ) {
+                    const fill = new Path2D();
+                    fill.moveTo(x + 0.2, y + 0.2);
+                    fill.lineTo(
+                        this.#prev_last_points[index].x,
+                        this.#prev_last_points[index].y
+                    );
+                    fill.lineTo(
+                        this.#prev_last_points[index - 1].x,
+                        this.#prev_last_points[index - 1].y
+                    );
+                    fill.lineTo(
+                        points[index - 1].x + 0.2,
+                        points[index - 1].y + 0.2
+                    );
+                    fill.lineTo(x + 0.2, y + 0.2);
+                    this.ctx.fillStyle = this.#serialize_color(
+                        ...lighting.hue,
+                        interpolate(
+                            interpolate(
+                                lighting.level,
+                                level[level.length - 2],
+                                0.5
+                            ),
+                            this.#prev_last_lighting_level[index],
+                            0.5
+                        )
                     );
                     this.ctx.fill(fill);
                 }
             }
-            const entity = this.#map.get(x, y);
             if (shading) {
                 if (
                     entity !== null &&
@@ -393,29 +498,6 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                 }
                 continue;
             }
-            if (entity !== null && entity.entity !== parent_entity) {
-                // console.log(entity, x, y);
-                if (shadow === null) {
-                    shadow = lighting.level;
-                    lit_entity = entity;
-                }
-                lighting.level -=
-                    lighting.level * entity.entity.lighting.absorption;
-            }
-            if (+lighting.level.toFixed(2) === 0) {
-                shading = true;
-                // this.ctx.strokeStyle = gradient;
-                // this.ctx.stroke(path);
-                continue;
-                // break;
-            }
-            lighting.level *= 0.99;
-            // lighting.level -= (lighting.level * Math.hypot(this.width, this.height));
-            // if (!shading) {
-            gradient.addColorStop(
-                points.indexOf(point) / (points.length - 1),
-                this.#serialize_color(...lighting.hue, lighting.level)
-            );
             // }
         }
         // if (this.#last_points === null || this.#last_points.length - 1 < light_index) {
@@ -425,15 +507,40 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         //     this.#current_path.lineTo(points[light_index].x, points[light_index].y);
         //     // this.#current_path.arcTo(midpoint.x, midpoint.y, points[light_index].x, points[light_index].y, 5);
         // }
-        this.#last_points = points.slice(0, light_index);
-        const last_point_on_screen = this.#last_points.findLastIndex(
+        const last_points = points.slice(0, light_index);
+        const last_point_on_screen = last_points.findLastIndex(
             value =>
                 value.x >= 0 &&
                 value.y >= 0 &&
                 value.x <= this.width &&
                 value.y <= this.height
         );
-        this.#last_points = this.#last_points.slice(0, last_point_on_screen);
+        const edge = new Path2D();
+        if (this.#last_points !== null && this.#last_points.length > 1) {
+            const start = points.at(-1);
+            const prev = last_points[last_point_on_screen - 1];
+            const end = this.#last_points[this.#last_points.length - 1];
+            const prev_end = this.#last_points[this.#last_points.length - 2];
+            edge.moveTo(
+                last_points[last_point_on_screen].x,
+                last_points[last_point_on_screen].y
+            );
+            edge.lineTo(end?.x, end?.y);
+            edge.lineTo((prev.x + prev_end.x) / 2, (prev.y + prev_end.y) / 2);
+            edge.lineTo(
+                last_points[last_point_on_screen].x,
+                last_points[last_point_on_screen].y
+            );
+            this.ctx.fillStyle = this.#serialize_color(
+                ...prev_lighting.hue,
+                prev_lighting.level
+            );
+            this.ctx.fill(edge);
+        }
+        this.#prev_last_points = this.#last_points;
+        this.#last_points = last_points.slice(0, last_point_on_screen);
+        this.#prev_last_lighting_level = this.#last_lighting_level;
+        this.#last_lighting_level = level.slice(0, last_point_on_screen);
         // this.#edges.push(points[last_point_on_screen]);
     }
 
@@ -461,10 +568,10 @@ export class RaytracingRenderer extends Renderer.Offscreen {
             y,
             delta_x,
             delta_y,
-            0,
-            this.width,
-            0,
-            this.height
+            -this.width * 0.5,
+            this.width * 1.5,
+            -this.height * 1.5,
+            this.height * 1.5
         );
         this.#ray_cache.set(serialized, points);
         this.#trace_ray_using_cache(entity, lighting, ...points);
@@ -507,7 +614,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         const e = {
             entity,
             x,
-            y,
+            y
         };
         this.#entities.push(e);
         this.#entities = this.#entities.toSorted(

@@ -140,6 +140,7 @@ export function select(text, choices, render_icon = () => {}) {
         }
     });
     let init = true;
+    let tick = 0;
     async function render() {
         renderer.ctx.fillStyle = 'white';
         renderer.ctx.font = '22px monospace, Noto Color Emoji';
@@ -213,7 +214,7 @@ export function select(text, choices, render_icon = () => {}) {
             );
             for (let i = 0; i < choices.length; i++) {
                 const level = (y += 22);
-                if (i === current_choice) {
+                if (i === current_choice && tick++ % 28 < 14) {
                     renderer.polygon(
                         {
                             x: renderer.width * 0.5 - offset,
@@ -282,7 +283,11 @@ function render_frame(lines, render_icon) {
  * @param {(renderer: Renderer, x: number, y: number) => void} [render_icon]
  * @param {number} [per_letter_duration]
  */
-export async function dialog(text, render_icon = () => {}, per_letter_duration = 75) {
+export async function dialog(
+    text,
+    render_icon = () => {},
+    per_letter_duration = 75
+) {
     await renderer.batch_async(async () => {
         renderer.clear();
         renderer.ctx.strokeStyle = 'white';
@@ -326,7 +331,9 @@ export async function dialog(text, render_icon = () => {}, per_letter_duration =
             renderer.batch(() => {
                 render_frame(rendered, render_icon);
             });
-            await new Promise(resolve => setTimeout(resolve, per_letter_duration));
+            await new Promise(resolve =>
+                setTimeout(resolve, per_letter_duration)
+            );
         }
     });
 }
@@ -489,4 +496,8 @@ export async function input(
     }
     await frame();
     return promise;
+}
+
+export function clear() {
+    renderer.batch(() => renderer.clear());
 }
