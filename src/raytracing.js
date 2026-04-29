@@ -149,6 +149,12 @@ function delta(start, end) {
  * Due to differences in how the raytracing renderer works as opposed to other renderers, a `background` callback must be passed to add consistent backgrounds.
  */
 export class RaytracingRenderer extends Renderer.Offscreen {
+    #alt_frame = document.createElement('canvas');
+    #alt_frame_ctx;
+    #current_frame;
+    #current_ctx;
+    #hidden_frame = this.#alt_frame;
+    #hidden_ctx;
     /**
      * @param {HTMLCanvasElement} offscreen
      * @param {HTMLCanvasElement} display
@@ -162,11 +168,24 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         render_pass = canvas => canvas
     ) {
         super(offscreen, display, render_pass);
+        this.#current_frame = display;
+        this.#current_ctx = this.display_ctx;
+        this.#alt_frame.width = this.width;
+        this.#alt_frame.height = this.height;
+        this.#alt_frame.style.zIndex = '1';
+        this.#alt_frame.className = 'raytraced';
+        this.#alt_frame_ctx = /** @type {CanvasRenderingContext2D} */ (
+            this.#alt_frame.getContext('2d')
+        );
+        this.#alt_frame_ctx.imageSmoothingEnabled = false;
+        this.#hidden_ctx = this.#alt_frame_ctx;
+        document.body.appendChild(this.#alt_frame);
         this.#background = background;
         this.#light_dissipation.set(10, 0.99);
         this.#light_dissipation.set(50, 0.995);
         this.#light_dissipation.set(100, 0.998505);
     }
+
     #queued_render = false;
     /** @type {Array<{ x: number; y: number; entity: Entity }>} */
     #entities = [];
@@ -174,10 +193,33 @@ export class RaytracingRenderer extends Renderer.Offscreen {
     #background;
 
     /** how much precision to use for raytracing */
-    precision = 20;
+    precision = 1;
 
     /** Promise that resolves when rendering has completed */
     promise = Promise.resolve();
+
+    /**
+     * @param {() => void} fn
+     */
+    batch(fn) {
+        this.#queued_render = true;
+        this.ctx.save();
+        fn();
+        this.ctx.restore();
+        this.#render();
+    }
+
+    /**
+     * @param {() => Promise<void>} fn
+     */
+    // @ts-expect-error
+    async batch_async(fn) {
+        this.#queued_render = true;
+        this.ctx.save();
+        await fn();
+        this.ctx.restore();
+        this.#render();
+    }
 
     #queue_render() {
         if (this.#queued_render) {
@@ -188,19 +230,31 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         );
         this.promise = promise;
         this.#queued_render = true;
-        requestAnimationFrame(() => {
-            this.#render();
+        requestAnimationFrame(async () => {
+            await this.#render();
             resolve();
         });
     }
 
-    #render() {
+    async #render() {
         const entities = [...this.#entities];
         this.#entities.length = 0;
+        this.#hidden_frame.style.zIndex = 2;
+        this.#current_frame.style.zIndex = 1;
+        [this.#current_ctx, this.#hidden_ctx] = [
+            this.#hidden_ctx,
+            this.#current_ctx
+        ];
+        [this.#current_frame, this.#hidden_frame] = [
+            this.#hidden_frame,
+            this.#current_frame
+        ];
+        this.display = this.#hidden_frame;
+        this.display_ctx = this.#hidden_ctx;
         super.batch(() => {
             super.clear();
             this.#background(this);
-            console.log(this.#map);
+            // console.log(this.#map);
             for (const e of entities) {
                 const { entity, x, y } = e;
                 this.ctx.save();
@@ -283,6 +337,20 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                 this.ctx.restore();
             }
             this.#queued_render = false;
+        });
+        requestAnimationFrame(() => {
+            this.#hidden_frame.style.zIndex = 2;
+            this.#current_frame.style.zIndex = 1;
+            [this.#current_ctx, this.#hidden_ctx] = [
+                this.#hidden_ctx,
+                this.#current_ctx
+            ];
+            [this.#current_frame, this.#hidden_frame] = [
+                this.#hidden_frame,
+                this.#current_frame
+            ];
+            this.display = this.#hidden_frame;
+            this.display_ctx = this.#hidden_ctx;
         });
     }
 
@@ -373,13 +441,13 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                 light_index++;
             }
             level.push(lighting.level);
-            
+
             prev_lighting = { ...lighting };
-            
+
             const { x, y } = point;
             const entity = this.#map.get(x, y);
             if (entity !== null && entity.entity !== parent_entity) {
-                console.log(entity, x, y);
+                // console.log(entity, x, y);
                 if (shadow === null) {
                     shadow = lighting.level;
                     lit_entity = entity;
@@ -450,7 +518,8 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                     this.#prev_last_lighting_level !== null &&
                     index > 0 &&
                     this.#prev_last_points.length > index &&
-                    delta(point, this.#prev_last_points[index]) > 1 / (index * 5)
+                    delta(point, this.#prev_last_points[index]) >
+                        1 / (index * 5)
                 ) {
                     const fill = new Path2D();
                     fill.moveTo(x + 0.2, y + 0.2);
@@ -488,7 +557,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                     entity !== lit_entity &&
                     entity.entity !== parent_entity
                 ) {
-                    console.log(entity);
+                    // console.log(entity);
                     shadow_path.moveTo(x, y);
                     shadow_path.rect(x, y, 5, 5);
                     // shadow_path.lineTo(x, y);

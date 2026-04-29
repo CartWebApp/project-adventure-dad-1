@@ -1,6 +1,6 @@
 // @ts-check
 import { RaytracingRenderer } from './raytracing.js';
-import { pixelator } from './utils.js';
+import { interpolate, pixelator } from './utils.js';
 const { Game } = await import('./game.js').then(async res => {
     await import('./story.js');
     return res;
@@ -27,7 +27,16 @@ window.addEventListener('resize', () => {
 const renderer = new RaytracingRenderer(
     canvas,
     display,
-    renderer => renderer.background('black'),
+    renderer => {
+        const time = (Math.sin(game.time / 60) / 2) + 0.5;
+        const color = {
+            r: interpolate(135, 0, time),
+            g: interpolate(206, 0, time),
+            b: interpolate(235, 0, time)
+        };
+        console.log(color);
+        renderer.background(`rgb(${color.r},${color.g},${color.b})`);
+    },
     pixelator(2)
 );
 const game = new Game(renderer);
