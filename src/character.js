@@ -3,6 +3,7 @@ import { CHARACTER_CHOICES } from './constants.js';
 import { Spell } from './obtainables.js';
 export const damageReduction = 0;
 export const combatTimer = 100;
+export const stamina_regen = 10;
 
 // Character Stats and Inventory
 

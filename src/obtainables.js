@@ -1,13 +1,16 @@
 import { BaseBuilder, effects } from './combat.js';
-
 import { damageReduction, combatTimer } from './character.js';
+import { stamina_regen } from './character.js';
 
+/**
+ * @param {string} spellName
+ * @returns {Object|null}
+ */
 function getSpellEffect(spellName) {
     const key = String(spellName || '').toLowerCase();
     return effects[key] || null;
 }
 
-// Attribute pools by rarity
 const commonAttributes = {
     lifeRegen: [5, 10],
     maxLife: [10, 15],
@@ -40,19 +43,16 @@ const legendaryAttributes = {
     manaRegen: 15,
     luck: 15
 };
+
 const specialAttributes = {
     common() {
-        // Multi all defence/damageReduction by 1.1
         return damageReduction * 1.1;
     },
     rare() {
-        // Reduce combat timer by 10%
         return combatTimer * 0.9;
     },
     epic() {
-        return null;
-        // Resistance to all damage types by 10%
-        // Build when calc the damage recieved each tick/frame
+        return stamina_regen * 1.5;
     },
     legendary: [
         '1 extra life',
@@ -67,47 +67,54 @@ const ATTRIBUTES_BY_RARITY = {
     epic: epicAttributes,
     legendary: legendaryAttributes
 };
+const RARITY_ORDER = ['common', 'rare', 'epic', 'legendary'];
+const WEIGHT_BY_RARITY = { common: 1, rare: 2, epic: 4, legendary: 8 };
 
-// Weight per rarity for cost (adjustible)
-const WEIGHT_BY_RARITY = {
-    common: 1,
-    rare: 2,
-    epic: 4,
-    legendary: 8
-};
+function getAttributeKeys(rarity) {
+    const pool = ATTRIBUTES_BY_RARITY[rarity];
+    if (!pool) return [];
+    if (Array.isArray(pool)) return pool.slice();
+    if (typeof pool === 'object') return Object.keys(pool);
+    return [];
+}
 
 function rarityForAttribute(attr) {
-    for (const r of Object.keys(ATTRIBUTES_BY_RARITY)) {
-        if ((ATTRIBUTES_BY_RARITY[r] || []).includes(attr)) return r;
+    for (let i = 0; i < RARITY_ORDER.length; i++) {
+        const r = RARITY_ORDER[i];
+        const pool = ATTRIBUTES_BY_RARITY[r];
+        if (Array.isArray(pool)) {
+            if (pool.includes(attr)) return r;
+        } else if (pool && typeof pool === 'object') {
+            if (Object.prototype.hasOwnProperty.call(pool, attr)) return r;
+        }
     }
-    // also check special attributes
     for (const r of Object.keys(specialAttributes)) {
-        if ((specialAttributes[r] || []).includes(attr)) return r;
+        const val = specialAttributes[r];
+        if (Array.isArray(val) && val.includes(attr)) return r;
     }
     return 'common';
 }
 
-// Small helper: get a random integer in [0, max)
 function randInt(max) {
     return Math.floor(Math.random() * max);
 }
 
-// Choose n unique random attributes from a rarity's pool.
 function pickRandomAttributes(rarity, n = 1) {
-    const pool = ATTRIBUTES_BY_RARITY[rarity] || [];
-    const result = [];
+    const pool = getAttributeKeys(rarity);
+    const out = [];
     const used = new Set();
-    const attemptsLimit = pool.length * 3;
+    const attemptsLimit = pool.length * 3 || 0;
     let attempts = 0;
-    while (result.length < n && attempts < attemptsLimit && pool.length > 0) {
+    while (out.length < n && attempts < attemptsLimit && pool.length > 0) {
         const idx = randInt(pool.length);
-        if (!used.has(idx)) {
-            used.add(idx);
-            result.push(pool[idx]);
+        const candidate = pool[idx];
+        if (candidate && !used.has(candidate)) {
+            used.add(candidate);
+            out.push(candidate);
         }
         attempts++;
     }
-    return result;
+    return out;
 }
 
 // armor templates (base data). We'll generate per-rarity copies with randomly picked attributes.
@@ -127,17 +134,18 @@ const armorTemplates = [
     { material: 'iron', type: 'Boots', defense: 20, baseCost: 40 }
 ];
 
-// Determine how many attributes to attach by rarity
-const ATTR_COUNT_BY_RARITY = {
-    common: 1,
-    rare: 2,
-    epic: 3,
-    legendary: 4
-};
+// Determine how many attributes to attach by rarity (kept inline if needed later)
 
-function buildarmorForRarity(rarity) {
-    return [];
+/**
+ * @param {string} rarity
+ * @returns {Array<{ material: string, type: string, defense: number, effects: string[], cost: number }>}
+ */
+function buildArmorForRarity(rarity) {
     // Return rarities cascade up to target, ex: "epic" -> ["common","rare","epic"]
+    /**
+     * @param {string} target
+     * @returns {string[]}
+     */
     function getCascadeRarities(target) {
         const order = ['common', 'rare', 'epic', 'legendary'];
         const idx = order.indexOf(target);
@@ -146,6 +154,10 @@ function buildarmorForRarity(rarity) {
 
     // Randomly degrade the cascade slightly
     // while preserving the total attribute count ex: [1 common,2 rare,0 epic,1 legendary].
+    /**
+     * @param {string} target
+     * @returns {Record<string, number>}
+     */
     function getRandomizedDistribution(target) {
         const cascade = getCascadeRarities(target);
         // start with one slot per rarity in the cascade
@@ -184,6 +196,9 @@ function buildarmorForRarity(rarity) {
         }
 
         // counts array corresponds to cascade rarities in order
+        /**
+         * @type {Record<string, number>}
+         */
         const result = {};
         for (let i = 0; i < cascade.length; i++) result[cascade[i]] = counts[i];
         return result;
@@ -193,8 +208,7 @@ function buildarmorForRarity(rarity) {
         // small chance to replace the whole cascade with a single special attribute for the target rarity
         const specialChance = 0.05; // 5% chance
         if (
-            specialAttributes[rarity] &&
-            specialAttributes[rarity].length > 0 &&
+            Array.isArray(specialAttributes[rarity]) &&
             Math.random() <= specialChance
         ) {
             const sa = specialAttributes[rarity];
@@ -220,12 +234,13 @@ function buildarmorForRarity(rarity) {
         for (const r of Object.keys(distribution)) {
             let needed = distribution[r] || 0;
             if (needed <= 0) continue;
-            console.log(ATTRIBUTES_BY_RARITY[r]);
-            const pool = ATTRIBUTES_BY_RARITY[r] || [];
-            if (pool.length === 0) continue;
-
+            const poolKeys = getAttributeKeys(r);
+            if (poolKeys.length === 0) continue;
+            /**
+             * @type {string[]}
+             */
             const picked = [];
-            const attemptsLimit = pool.length * 3;
+            const attemptsLimit = poolKeys.length * 3;
             let attempts = 0;
             while (picked.length < needed && attempts < attemptsLimit) {
                 const candidate = pickRandomAttributes(r, 1)[0];
@@ -235,9 +250,9 @@ function buildarmorForRarity(rarity) {
                 attempts++;
             }
 
-            // fallback: take first non-used entries from pool
+            // fallback: take first non-used entries from poolKeys
             if (picked.length < needed) {
-                for (const p of pool) {
+                for (const p of poolKeys) {
                     if (picked.length >= needed) break;
                     if (!used.has(p) && !picked.includes(p)) picked.push(p);
                 }
@@ -256,8 +271,8 @@ function buildarmorForRarity(rarity) {
             let safety = 0;
             while (effects.length < totalNeeded && safety < 100) {
                 const r = fallbackOrder[i % fallbackOrder.length];
-                const pool = ATTRIBUTES_BY_RARITY[r] || [];
-                for (const p of pool) {
+                const pool = /** @type {any} */ (ATTRIBUTES_BY_RARITY)[r] || [];
+                for (const p of /** @type {any[]} */ (pool)) {
                     if (effects.length >= totalNeeded) break;
                     if (!used.has(p)) {
                         effects.push(p);
@@ -286,13 +301,13 @@ function buildarmorForRarity(rarity) {
 }
 
 // Now build obtainables arrays
-const commonArmor = [...buildarmorForRarity('common')];
+const commonArmor = [...buildArmorForRarity('common')];
 
-const rareArmor = [...buildarmorForRarity('rare')];
+const rareArmor = [...buildArmorForRarity('rare')];
 
-const epicArmor = [...buildarmorForRarity('epic')];
+const epicArmor = [...buildArmorForRarity('epic')];
 
-const legendaryArmor = [...buildarmorForRarity('legendary')];
+const legendaryArmor = [...buildArmorForRarity('legendary')];
 
 // obtainables will be assembled after we define spells/items/weapons/potions (below)
 
@@ -352,7 +367,16 @@ class Item {
 
 class ItemBuilder extends BaseBuilder {
     constructor() {
-        super(data => new Item(data), 'name', 'description', 'throwable', 'uses', 'edible_uses', 'value');
+        super(
+            data => new Item(data),
+            'name',
+            'description',
+            'throwable',
+            'uses',
+            'edible_uses',
+            'value',
+            'assets'
+        );
     }
 }
 
@@ -388,12 +412,19 @@ export class Spell {
 
 class SpellBuilder extends BaseBuilder {
     constructor() {
-        super(data => {
-            // ensure fields exist bcs someone desided to make my life hell by making spells wierd
-            if (!data.mana_cost_by_rarity) data.mana_cost_by_rarity = {};
-            if (!data.params_by_rarity) data.params_by_rarity = {};
-            return new Spell(data);
-        }, 'name', 'mana_cost_by_rarity', 'cast', 'effect', 'params_by_rarity');
+        super(
+            data => {
+                // ensure fields exist bcs someone desided to make my life hell by making spells wierd
+                if (!data.mana_cost_by_rarity) data.mana_cost_by_rarity = {};
+                if (!data.params_by_rarity) data.params_by_rarity = {};
+                return new Spell(data);
+            },
+            'name',
+            'mana_cost_by_rarity',
+            'cast',
+            'effect',
+            'params_by_rarity'
+        );
     }
 }
 
@@ -504,6 +535,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(5 * GOLD)
+        .with_assets(['assets/holy_hand_grenade.png'])
         .build(),
     new ItemBuilder()
         .with_name('Rock')
@@ -511,6 +543,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(2 * COPPER)
+        .with_assets(['assets/rock.png'])
         .build(),
     new ItemBuilder()
         .with_name('Molotov Cocktail')
@@ -520,6 +553,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(30 * SILVER)
+        .with_assets(['assets/molotov_cocktail.png'])
         .build(),
     new ItemBuilder()
         .with_name('Old Boot')
@@ -527,6 +561,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(1 * COPPER)
+        .with_assets(['assets/old_boot.png'])
         .build(),
     new ItemBuilder()
         .with_name('Potato')
@@ -537,6 +572,7 @@ const items = [
         .with_uses(1)
         .with_edible_uses(1)
         .with_value(10 * COPPER)
+        .with_assets(['assets/potato.png'])
         .build(),
     new ItemBuilder()
         .with_name('Thinkpad X1 Carbon')
@@ -546,6 +582,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(10 * GOLD)
+        .with_assets(['assets/thinkpad_x1_carbon.png'])
         .build(),
     new ItemBuilder()
         .with_name('Sock Puppet')
@@ -553,6 +590,16 @@ const items = [
         .with_throwable(false)
         .with_uses(1)
         .with_value(10 * COPPER)
+        .with_assets([
+            'assets/sock_puppet_1.png',
+            'assets/sock_puppet_2.png',
+            'assets/sock_puppet_3.png',
+            'assets/sock_puppet_4.png',
+            'assets/sock_puppet_5.png',
+            'assets/sock_puppet_6.png',
+            'assets/sock_puppet_7.png',
+            'assets/sock_puppet_8.png'
+        ])
         .build(),
     new ItemBuilder()
         .with_name('The Last Straw')
@@ -562,6 +609,13 @@ const items = [
         .with_throwable(false)
         .with_uses(1)
         .with_value(15 * SILVER)
+        .with_assets([
+            'assets/the_last_straw_1.png',
+            'assets/the_last_straw_2.png',
+            'assets/the_last_straw_3.png',
+            'assets/the_last_straw_4.png',
+            'assets/the_last_straw_5.png'
+        ])
         .build(),
     new ItemBuilder()
         .with_name('Napkin')
@@ -569,6 +623,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(10 * COPPER)
+        .with_assets(['assets/napkin.png'])
         .build(),
     new ItemBuilder()
         .with_name('Anvil')
@@ -576,6 +631,7 @@ const items = [
         .with_throwable(true)
         .with_uses(3)
         .with_value(50 * SILVER)
+        .with_assets(['assets/anvil.png'])
         .build()
 ];
 
@@ -647,7 +703,12 @@ const spells = [
         .with_name('Mana Bolt')
         .with_cast('battle')
         .with_effect({ type: 'directDamage' })
-        .with_mana_cost_by_rarity({ common: 15, rare: 20, epic: 30, legendary: 50 })
+        .with_mana_cost_by_rarity({
+            common: 15,
+            rare: 20,
+            epic: 30,
+            legendary: 50
+        })
         .build(),
     new SpellBuilder()
         .with_name('Black Hole')
@@ -676,7 +737,12 @@ const spells = [
             epic: { damage: 28 },
             legendary: { damage: 36 }
         })
-        .with_mana_cost_by_rarity({ common: 12, rare: 22, epic: 30, legendary: 40 })
+        .with_mana_cost_by_rarity({
+            common: 12,
+            rare: 22,
+            epic: 30,
+            legendary: 40
+        })
         .build(),
     new SpellBuilder()
         .with_name('Portal')
@@ -755,7 +821,12 @@ const spells = [
             epic: { damage: 12, burnSeconds: 10 },
             legendary: { damage: 24, burnSeconds: 15 }
         })
-        .with_mana_cost_by_rarity({ common: 14, rare: 24, epic: 28, legendary: 32 })
+        .with_mana_cost_by_rarity({
+            common: 14,
+            rare: 24,
+            epic: 28,
+            legendary: 32
+        })
         .build(),
     new SpellBuilder()
         .with_name('Raise Dead')
@@ -789,7 +860,7 @@ const obtainables = [
 export {
     randInt,
     pickRandomAttributes,
-    buildarmorForRarity as getarmorForRarity,
+    buildArmorForRarity as getArmorForRarity,
     obtainables,
     potions,
     items,
