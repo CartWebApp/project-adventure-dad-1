@@ -43,6 +43,7 @@ export class Game {
     /** @type {Step} */
     static story = story;
     /** @type {Player} */
+    // @ts-expect-error
     player;
     /** @type {Step | null} */
     current_step = null;
@@ -50,6 +51,7 @@ export class Game {
     renderer;
     /** @type {number[]} */
     step_sequence = [];
+    time = 0;
     /**
      * @param {RaytracingRenderer} renderer
      */

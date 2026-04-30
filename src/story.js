@@ -272,7 +272,7 @@ class Dialog extends Step {
     }
 }
 
-export class Parallel extends Step {
+class Parallel extends Step {
     /** @type {Step[]} */
     steps = [];
     /**
@@ -301,6 +301,130 @@ class Delayed extends Step {
     }
     async execute() {
         await new Promise(resolve => setTimeout(resolve, this.delay));
+    }
+}
+
+class Loop extends Step {
+    body;
+    /** @type {(game: Game) => boolean} */
+    condition = () => true;
+    /**
+     * @param {(game: Game) => (Promise<void> | void)} fn
+     */
+    constructor(fn) {
+        super();
+        this.body = fn;
+    }
+
+    /**
+     * @param {(game: Game) => boolean} condition
+     */
+    until(condition) {
+        this.condition = condition;
+        return this;
+    }
+
+    /**
+     * @param {Game} game
+     */
+    async execute(game) {
+        while (this.condition(game)) {
+            await this.body(game);
+        }
+    }
+}
+
+/**
+ * @template State
+ */
+class StatefulLoop extends Step {
+    /** @type {(game: Game) => (State | Promise<State>)} */
+    body;
+    /** @type {(game: Game, state: State) => boolean} */
+    condition = () => true;
+    /**
+     * @param {(game: Game) => (State | Promise<State>)} body
+     */
+    constructor(body) {
+        super();
+        this.body = body;
+    }
+
+    /**
+     * @param {(game: Game, state: State) => boolean} condition
+     */
+    until(condition) {
+        this.condition = (game, state) => !condition(game, state);
+        return this;
+    }
+
+    /**
+     * @param {(game: Game, state: State) => boolean} condition
+     */
+    while(condition) {
+        this.condition = condition;
+        return this;
+    }
+
+    /**
+     * @param {Game} game
+     */
+    async execute(game) {
+        let state;
+        do {
+            state = await this.body(game);
+        } while (this.condition(game, state));
+    }
+}
+
+class Render extends Step {
+    render;
+    logic;
+    batch = false;
+    /**
+     * @param {(game: Game) => (void | Promise<void>)} render
+     * @param {(game: Game) => (void | Promise<void>)} logic
+     */
+    constructor(render, logic) {
+        super();
+        this.render = render;
+        this.logic = logic;
+    }
+
+    /**
+     * @param {boolean} batch
+     */
+    with_batch(batch) {
+        this.batch = batch;
+        return this;
+    }
+
+    /**
+     * @param {Game} game
+     */
+    async execute(game) {
+        const { promise, resolve } = /** @type {PromiseWithResolvers<void>} */ (
+            Promise.withResolvers()
+        );
+        let done = false;
+        const loop = async () => {
+            if (this.batch) {
+                await game.renderer.batch_async(
+                    async () => await this.render(game)
+                );
+            } else {
+                await this.render(game);
+            }
+            if (!done) {
+                return requestAnimationFrame(loop);
+            }
+        };
+        loop();
+        Promise.resolve(this.logic(game)).then(() => {
+            done = true;
+            resolve();
+        });
+        return promise;
     }
 }
 
@@ -389,14 +513,36 @@ export const story = new Parallel(
     )
     .then(
         new Parallel(
-            new Execute(async ({ renderer }) => {
-                renderer.batch(() => {
-                    clear();
-                    renderer.clear();
-                    renderer.entity(new Ground(), 0, 0);
-                    renderer.entity(new Sun(), renderer.width * 0.9, renderer.height * 0.1);
-                    renderer.entity(new Tree(), renderer.width * 0.9, 0);
-                });
+            new Parallel(
+                new Render(
+                    async ({ renderer, time }) => {
+                        // renderer.batch(() => {
+                            clear();
+                            renderer.clear();
+                            renderer.entity(new Ground(), 0, 0);
+                            renderer.entity(
+                                new Sun(),
+                                renderer.width * 0.9,
+                                (Math.sin(time / 60) * 0.05 + 0.05) *
+                                    renderer.height
+                            );
+                            renderer.entity(
+                                new Tree(),
+                                renderer.width * 0.9,
+                                0
+                            );
+                        // });
+                    },
+                    () => {
+                        return new Promise(resolve => {});
+                    }
+                )
+                .with_batch(true)
+            ),
+            new Loop(async game => {
+                game.time++;
+                game.renderer.refresh();
+                await new Promise(resolve => setTimeout(resolve, 100));
             })
         )
     );
