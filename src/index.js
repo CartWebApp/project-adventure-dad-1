@@ -28,14 +28,11 @@ const renderer = new RaytracingRenderer(
     canvas,
     display,
     renderer => {
-        const time = (Math.sin(game.time / 60) / 2) + 0.5;
-        const color = {
-            r: interpolate(135, 0, time),
-            g: interpolate(206, 0, time),
-            b: interpolate(235, 0, time)
-        };
-        console.log(color);
-        renderer.background(`rgb(${color.r},${color.g},${color.b})`);
+        const time = Math.sin(game.time / 60 + Math.PI / 5) / 2 + 0.5;
+        const r = interpolate(135, 0, time);
+        const g = interpolate(206, 0, time);
+        const b = interpolate(235, 0, time);
+        renderer.background(`rgb(${r},${g},${b})`);
     },
     pixelator(2)
 );

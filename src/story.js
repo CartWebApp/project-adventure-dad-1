@@ -2,7 +2,7 @@ import { Player } from './character.js';
 import { Entity } from './combat.js';
 import { CHARACTER_CHOICES, STATES } from './constants.js';
 import { Game } from './game.js';
-import { Ground, Sun, Tree } from './objects.js';
+import { Ground, Knight, Moon, Sun, Tree } from './objects.js';
 import { Renderer } from './renderer.js';
 import { clear, dialog, input, select } from './ui.js';
 import { CombatBuilder, DIFFICULTY, pickEnemiesForDifficulty } from './battle.js';
@@ -520,17 +520,30 @@ export const story = new Parallel(
                             clear();
                             renderer.clear();
                             renderer.entity(new Ground(), 0, 0);
-                            renderer.entity(
-                                new Sun(),
-                                renderer.width * 0.9,
-                                (Math.sin(time / 60) * 0.05 + 0.05) *
-                                    renderer.height
-                            );
+                            const center_x = renderer.width * 0.6;
+                            const center_y = renderer.height * 0.6;
+                            const angle = (time / 60) + Math.PI;
+                            const sun_x = center_x + (0.35 * renderer.width - center_x) * Math.cos(angle) - (0.15 * renderer.height - center_y) * Math.sin(angle);
+                            const sun_y = center_y + (0.35 * renderer.width - center_x) * Math.sin(angle) + (0.15 * renderer.height - center_y) * Math.cos(angle);
+                            if (sun_x > 0 && sun_x < renderer.width && sun_y > 0 && sun_y < renderer.height) {
+                                renderer.entity(
+                                    new Sun(),
+                                    sun_x,
+                                    sun_y
+                                );
+                            }
+                            const moon_angle = (time / 60);
+                            const moon_x = center_x + (0.35 * renderer.width - center_x) * Math.cos(moon_angle) - (0.15 * renderer.height - center_y) * Math.sin(moon_angle);
+                            const moon_y = center_y + (0.35 * renderer.width - center_x) * Math.sin(moon_angle) + (0.15 * renderer.height - center_y) * Math.cos(moon_angle);
+                            if (moon_x > 0 && moon_x < renderer.width && moon_y > 0 && moon_y < renderer.height) {
+                                renderer.entity(new Moon(), moon_x, moon_y);
+                            }
                             renderer.entity(
                                 new Tree(),
                                 renderer.width * 0.9,
                                 0
                             );
+                            renderer.entity(Knight.get_instance(), renderer.width * 0.75, renderer.height * 0.5);
                         // });
                     },
                     () => {

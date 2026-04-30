@@ -51,7 +51,7 @@ export class Game {
     renderer;
     /** @type {number[]} */
     step_sequence = [];
-    time = 0;
+    time = 140; // offset it a bit so it starts at daytime
     /**
      * @param {RaytracingRenderer} renderer
      */
@@ -85,13 +85,15 @@ export class Game {
     save() {
         localStorage.game = JSON.stringify({
             steps: this.step_sequence,
-            player: this.player
+            player: this.player,
+            time: this.time
         });
     }
 
     load() {
         if (localStorage.game !== undefined) {
-            const { player, steps } = JSON.parse(localStorage.game);
+            const { player, steps, time } = JSON.parse(localStorage.game);
+            this.time = time;
             this.player = Object.assign(new Player('', 1), player);
             this.step_sequence = steps;
             this.current_step = Step.goto(/** @type {number} */ (this.step_sequence.pop()));
