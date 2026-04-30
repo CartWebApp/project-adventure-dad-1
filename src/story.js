@@ -5,6 +5,7 @@ import { Game } from './game.js';
 import { Ground, Sun, Tree } from './objects.js';
 import { Renderer } from './renderer.js';
 import { clear, dialog, input, select } from './ui.js';
+import { CombatBuilder, DIFFICULTY, pickEnemiesForDifficulty } from './battle.js';
 
 export class Step {
     /** @type {(typeof STATES)[keyof typeof STATES]} */

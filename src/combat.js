@@ -1,7 +1,6 @@
 // @ts-check
 /** @import { EnemyBuilderData } from './types.js' */
 /// <reference lib="es2023" />
-// Local BaseBuilder
 /**
  * @template {Record<string, unknown>} T
  * @template V
