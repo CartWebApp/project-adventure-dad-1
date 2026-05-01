@@ -8,7 +8,7 @@ import {
 import { spells as SPELL_DEFINITIONS } from './obtainables.js';
 import { Player } from './character.js';
 import { TICKS_PER_SEC } from './combat.js';
-import { dialog } from './ui.js';
+import { dialog, input, select } from './ui.js';
 import { Game } from './game.js';
 import { ORIENTATIONS } from './constants.js';
 
@@ -736,17 +736,17 @@ class Combat {
                     const target = aliveEnemies[0];
                     if (target) {
                         // choose action
-                        if (player.stamina >= 10) {
+                        if (player.stamina < 10 && player.mana < 12) {
                             await playerMelee(player, target);
-                        } else if (player.mana >= 12) {
+                        } else if (await select('Do you want to perform a spell or melee attack?', ['Spell', 'Melee']) === 'Melee') {
+                            await playerMelee(player, target);
+                        } else {
                             await playerCast(
                                 player,
                                 target,
                                 enemies,
-                                'Magic Missile'
+                                await select('Choose an attack.', Object.keys(SPELLS).map(name => name.toLowerCase()))
                             );
-                        } else {
-                            await playerMelee(player, target);
                         }
                     }
                     // Player action code goes here -------------------------------->
