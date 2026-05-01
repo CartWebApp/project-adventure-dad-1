@@ -5,7 +5,18 @@ import { Game } from './game.js';
 import { Ground, Sun, Tree } from './objects.js';
 import { Renderer } from './renderer.js';
 import { clear, dialog, input, select } from './ui.js';
-import { CombatBuilder, DIFFICULTY, pickEnemiesForDifficulty } from './battle.js';
+import {
+    CombatBuilder,
+    DIFFICULTY,
+    pickEnemiesForDifficulty
+} from './battle.js';
+import {
+    items,
+    spells,
+    weapons,
+    potions,
+    getArmorForRarity
+} from './obtainables.js';
 
 export class Step {
     /** @type {(typeof STATES)[keyof typeof STATES]} */
@@ -125,6 +136,176 @@ class Execute extends Step {
         await this.executor(game);
     }
 }
+
+const BattleEncounter = new Execute(async game => {
+    // Choose difficulty dynamically if you want; here we use MEDIUM
+    const difficulty = DIFFICULTY.MEDIUM;
+
+    const enemies = pickEnemiesForDifficulty(difficulty);
+
+    // Build and start combat
+    const combat = new CombatBuilder()
+        .with_difficulty(difficulty)
+        .with_player(game.player)
+        .with_enemies(enemies)
+        .build();
+
+    const result = await combat.start();
+
+    // store result on game for subsequent steps
+    game._lastCombatResult = Object.assign({}, result, { difficulty });
+});
+
+// Steps to run after a battle outcome. Keep them lightweight so they can
+// be reused by any Branch that wants to route based on combat results.
+const AfterWin = new Execute(async game => {
+    await dialog('You defeated your foes!');
+    if (!game.player) return;
+    // small reward: restore some stamina/mana and give a bit of luck
+    game.player.stamina = Math.min(
+        game.player.max_stamina,
+        game.player.stamina + 10
+    );
+    game.player.mana = Math.min(game.player.max_mana, game.player.mana + 5);
+    game.player.luck = (game.player.luck || 0) + 1;
+
+    // Award money and an item based on difficulty
+    const difficulty = game._lastCombatResult?.difficulty || DIFFICULTY.MEDIUM;
+    let minMoney = 25,
+        maxMoney = 100;
+    let tier = 1; // 0=low,1=mid,2=high
+    if (difficulty === DIFFICULTY.EASY) {
+        minMoney = 25;
+        maxMoney = 100;
+        tier = 0;
+    } else if (difficulty === DIFFICULTY.MEDIUM) {
+        minMoney = 200;
+        maxMoney = 600;
+        tier = 1;
+    } else if (difficulty === DIFFICULTY.HARD) {
+        minMoney = 1200;
+        maxMoney = 5000;
+        tier = 2;
+    }
+    const money =
+        Math.floor(Math.random() * (maxMoney - minMoney + 1)) + minMoney;
+    game.player.money = (game.player.money || 0) + money;
+
+    // Select an item from the items array biased by value tiers
+    const sorted = [...items].sort((a, b) => (a.value || 0) - (b.value || 0));
+    const third = Math.max(1, Math.floor(sorted.length / 3));
+    let pool = [];
+    if (tier === 0) pool = sorted.slice(0, third);
+    else if (tier === 1) pool = sorted.slice(third, third * 2);
+    else pool = sorted.slice(third * 2);
+    if (pool.length === 0) pool = sorted;
+    const item = pool[Math.floor(Math.random() * pool.length)];
+    game.player.inventory = game.player.inventory || [];
+    game.player.inventory.push(item);
+
+    // Award a potion (always) chosen by difficulty-tier
+    const potionPool = potions || [];
+    let potionCandidates = potionPool;
+    if (difficulty === DIFFICULTY.EASY)
+        potionCandidates = potionPool.filter(
+            p => (p.costs?.common ?? p.value ?? 0) < 200
+        );
+    else if (difficulty === DIFFICULTY.MEDIUM)
+        potionCandidates = potionPool.filter(
+            p => (p.costs?.rare ?? p.value ?? 0) < 2000
+        );
+    else potionCandidates = potionPool;
+    if (potionCandidates.length > 0) {
+        const chosenPotion = JSON.parse(
+            JSON.stringify(
+                potionCandidates[
+                    Math.floor(Math.random() * potionCandidates.length)
+                ]
+            )
+        );
+        game.player.inventory.push(chosenPotion);
+    }
+
+    // Possibly award armor/weapon (chance scales with difficulty)
+    const armorChance =
+        difficulty === DIFFICULTY.EASY
+            ? 0.3
+            : difficulty === DIFFICULTY.MEDIUM
+              ? 0.6
+              : 0.9;
+    if (Math.random() < armorChance) {
+        const rarity =
+            difficulty === DIFFICULTY.EASY
+                ? 'common'
+                : difficulty === DIFFICULTY.MEDIUM
+                  ? 'rare'
+                  : 'epic';
+        const armorPool = getArmorForRarity(rarity) || [];
+        if (armorPool.length > 0) {
+            const chosenArmor = JSON.parse(
+                JSON.stringify(
+                    armorPool[Math.floor(Math.random() * armorPool.length)]
+                )
+            );
+            game.player.inventory.push(chosenArmor);
+        }
+    }
+
+    // Possibly award a spell (chance scales with difficulty)
+    const spellChance =
+        difficulty === DIFFICULTY.EASY
+            ? 0.2
+            : difficulty === DIFFICULTY.MEDIUM
+              ? 0.5
+              : 0.8;
+    if (Math.random() < spellChance && spells.length > 0) {
+        // Prefer spells that have params or costs for the target rarity
+        const targetRarity =
+            difficulty === DIFFICULTY.EASY
+                ? 'common'
+                : difficulty === DIFFICULTY.MEDIUM
+                  ? 'rare'
+                  : 'epic';
+        const candidates = spells.filter(s => {
+            return (
+                (s.params_by_rarity && s.params_by_rarity[targetRarity]) ||
+                (s.mana_cost_by_rarity &&
+                    s.mana_cost_by_rarity[targetRarity]) ||
+                true
+            );
+        });
+        const chosenSpell = JSON.parse(
+            JSON.stringify(
+                candidates[Math.floor(Math.random() * candidates.length)]
+            )
+        );
+        game.player.spells = game.player.spells || [];
+        game.player.spells.push(chosenSpell);
+    }
+
+    await dialog(`You found ${item.name} and ${money} copper!`);
+});
+
+const AfterLoss = new Execute(async game => {
+    await dialog('You were defeated... You awaken later, bruised but alive.');
+    // revive the player to half health and remove one extra life if present
+    if (game.player) {
+        game.player.health = Math.max(
+            1,
+            Math.floor((game.player.max_life || 100) * 0.5)
+        );
+        if (game.player.extra_lives > 0) game.player.extra_lives -= 1;
+    }
+});
+
+// Branch that runs the battle and then chooses the next step
+const BattleBranch = new Branch(async game => {
+    // run the encounter
+    await BattleEncounter.execute(game);
+    // read the result
+    const won = !!game._lastCombatResult?.won;
+    return won ? 0 : 1;
+}).with_branches(AfterWin, AfterLoss);
 
 class Battle extends Step {
     /** @type {(game: Game) => Entity[] | Promise<Entity[]>} */
@@ -517,31 +698,40 @@ export const story = new Parallel(
                 new Render(
                     async ({ renderer, time }) => {
                         // renderer.batch(() => {
-                            clear();
-                            renderer.clear();
-                            renderer.entity(new Ground(), 0, 0);
-                            renderer.entity(
-                                new Sun(),
-                                renderer.width * 0.9,
-                                (Math.sin(time / 60) * 0.05 + 0.05) *
-                                    renderer.height
-                            );
-                            renderer.entity(
-                                new Tree(),
-                                renderer.width * 0.9,
-                                0
-                            );
+                        clear();
+                        renderer.clear();
+                        renderer.entity(new Ground(), 0, 0);
+                        renderer.entity(
+                            new Sun(),
+                            renderer.width * 0.9,
+                            (Math.sin(time / 60) * 0.05 + 0.05) *
+                                renderer.height
+                        );
+                        renderer.entity(new Tree(), renderer.width * 0.9, 0);
                         // });
                     },
                     () => {
                         return new Promise(resolve => {});
                     }
-                )
-                .with_batch(true)
+                ).with_batch(true)
             ),
             new Loop(async game => {
                 game.time++;
                 game.renderer.refresh();
+
+                try {
+                    if (Math.random() < 0.01) {
+                        await dialog('You sense danger nearby...');
+                        await BattleEncounter.execute(game);
+                        const won = !!game._lastCombatResult?.won;
+                        if (won) await AfterWin.execute(game);
+                        else await AfterLoss.execute(game);
+                    }
+                } catch (e) {
+                    // don't let a battle break the main loop
+                    console.error('Battle error', e);
+                }
+
                 await new Promise(resolve => setTimeout(resolve, 100));
             })
         )

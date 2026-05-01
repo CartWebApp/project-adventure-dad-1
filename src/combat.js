@@ -122,90 +122,96 @@ function randFloatRng(min, max, rng) {
  * @param {string} spellName
  * @returns {object}
  */
+const TICKS_PER_SEC = 60;
 
 const effects = {
-    // Burning: Deals 2 damage every second over x time
-    burning: (durationSeconds = 5, damagePerSecond = 2) => ({
+    // Burning: Deals damagePerTick each tick over duration (ticks)
+    // Defaults keep previous semantics (5s @ 2 DPS => duration=5*TICKS_PER_SEC, damagePerTick=2/TICKS_PER_SEC)
+    burning: (
+        durationTicks = 5 * TICKS_PER_SEC,
+        damagePerTick = 2 / TICKS_PER_SEC // default 2 DPS converted to per-tick
+    ) => ({
         name: 'Burning',
         type: 'damageOverTime',
-        damagePerSecond,
-        duration: durationSeconds
+        damagePerTick,
+        duration: durationTicks
     }),
 
-    // Blindness: Reduces visibility/accuracy by x% over y time.
-    blindness: (durationSeconds = 5, accuracyPenaltyPercent = 50) => ({
+    // Blindness: Reduces visibility/accuracy by x% over y time (duration in ticks)
+    blindness: (durationTicks = 5 * TICKS_PER_SEC, accuracyPenaltyPercent = 50) => ({
         name: 'Blindness',
         type: 'accuracyDebuff',
         accuracyPenaltyPercent,
-        duration: durationSeconds
+        duration: durationTicks
     }),
 
-    // Withering: Deals 20 damage every 5 seconds over x time.
+    // Withering: Deals damagePerTick every tickInterval (in ticks) over duration (in ticks)
     withering: (
-        durationSeconds = 15,
+        durationTicks = 15 * TICKS_PER_SEC,
+        // damagePerTick represents the damage applied every tickIntervalTicks
         damagePerTick = 20,
-        tickInterval = 5
+        tickIntervalTicks = 5 * TICKS_PER_SEC
     ) => ({
         name: 'Withering',
         type: 'damageOverTime',
         damagePerTick,
-        tickInterval,
-        duration: durationSeconds
+        tickInterval: tickIntervalTicks,
+        duration: durationTicks
     }),
 
-    // Poison: Deals x damage every second until dead or cured
-    poison: (damagePerSecond = 1) => ({
+    // Poison: Deals damagePerTick each tick until cured
+    poison: (damagePerTick = 1 / TICKS_PER_SEC) => ({
         name: 'Poison',
         type: 'damageOverTime',
-        damagePerSecond,
+        damagePerTick,
         duration: Infinity,
         untilCured: true
     }),
 
-    // Shocked: Can"t use items/spells/attacks for x time
-    shocked: (durationSeconds = 3) => ({
+    // Shocked: Can't use items/spells/attacks for x ticks
+    shocked: (durationTicks = 3 * TICKS_PER_SEC) => ({
         name: 'Shocked',
         type: 'disable',
         disabled: true,
-        duration: durationSeconds
+        duration: durationTicks
     }),
 
     // Petrified: Target is completely immobilized and cannot act for x time; takes +25% damage while petrified
-    petrified: (durationSeconds = 4) => ({
+    petrified: (durationTicks = 4 * TICKS_PER_SEC) => ({
         name: 'Petrified',
         type: 'immobilize',
         immobilized: true,
-        duration: durationSeconds,
+        duration: durationTicks,
         damageTakenMultiplier: 1.25
     }),
 
     // Rooted: Affected individual always is hit with attacks, deals 1 damage every second over 5 seconds
-    rooted: (durationSeconds = 5, damagePerSecond = 1, alwaysHit = true) => ({
+    rooted: (durationTicks = 5 * TICKS_PER_SEC, damagePerTick = 1 / TICKS_PER_SEC, alwaysHit = true) => ({
         name: 'Rooted',
         type: 'root',
         alwaysHit,
-        damagePerSecond,
-        duration: durationSeconds
+        damagePerTick,
+        duration: durationTicks
     }),
 
     // Weakness: All attacks deal half damage for x time
-    weakness: (durationSeconds = 10, damageMultiplier = 0.5) => ({
+    weakness: (durationTicks = 10 * TICKS_PER_SEC, damageMultiplier = 0.5) => ({
         name: 'Weakness',
         type: 'damageDebuff',
         damageMultiplier,
-        duration: durationSeconds
+        duration: durationTicks
     }),
 
-    // Iced: Reduces combat timer by x seconds
-    iced: (reduceSeconds = 5) => ({
+    // Iced: Reduces combat timer by x ticks
+    iced: (reduceTicks = 5 * TICKS_PER_SEC) => ({
         name: 'Iced',
         type: 'combatTimer',
-        reduceBySeconds: reduceSeconds
+        reduceByTicks: reduceTicks
     }),
 
     // Cursed: Target takes +50% damage and receives reduced healing for x time
     cursed: (
-        durationSeconds = 10,
+        durationTicks = 10 * TICKS_PER_SEC,
         damageTakenMultiplier = 1.5,
         reducedHealing = true
     ) => ({
@@ -213,7 +219,7 @@ const effects = {
         type: 'damageAmplify',
         damageTakenMultiplier,
         reducedHealing,
-        duration: durationSeconds
+        duration: durationTicks
     })
 };
 
@@ -284,8 +290,10 @@ class EnemyBuilder
             let baseFactor;
             if (healthVal > 140)
                 baseFactor = 0.06; // very large enemies regen faster
-            else if (healthVal > 80) baseFactor = 0.04; // large
-            else if (healthVal > 40) baseFactor = 0.03; // medium
+            else if (healthVal > 80)
+                baseFactor = 0.04; // large
+            else if (healthVal > 40)
+                baseFactor = 0.03; // medium
             else baseFactor = 0.02; // small
 
             // overrides for special cases
@@ -570,4 +578,4 @@ const enemies = [
         .build()
 ];
 
-export { effects, enemies };
+export { effects, enemies, TICKS_PER_SEC };

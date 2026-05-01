@@ -45,6 +45,11 @@ export class Game {
     /** @type {Player} */
     // @ts-expect-error
     player;
+    /**
+     * Optional holder for the last combat result produced by `BattleEncounter`.
+     * @type {{ won?: boolean, details?: any } | undefined}
+     */
+    _lastCombatResult;
     /** @type {Step | null} */
     current_step = null;
     /** @type {RaytracingRenderer} */

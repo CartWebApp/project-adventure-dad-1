@@ -690,10 +690,10 @@ const weapons = [
         .with_name('Fire Axe')
         .with_general('Deals damage and applies burning')
         .with_stats_by_rarity({
-            common: { damage: 8, stamina: 10, burnSeconds: 4 },
-            rare: { damage: 10, stamina: 10, burnSeconds: 6 },
-            epic: { damage: 14, stamina: 15, burnSeconds: 8 },
-            legendary: { damage: 18, stamina: 15, burnSeconds: 10 }
+            common: { damage: 8, stamina: 10, burnTicks: 4 * 60 },
+            rare: { damage: 10, stamina: 10, burnTicks: 6 * 60 },
+            epic: { damage: 14, stamina: 15, burnTicks: 8 * 60 },
+            legendary: { damage: 18, stamina: 15, burnTicks: 10 * 60 }
         })
         .build()
 ];
@@ -703,11 +703,17 @@ const spells = [
         .with_name('Mana Bolt')
         .with_cast('battle')
         .with_effect({ type: 'directDamage' })
+        .with_params_by_rarity({
+            common: { damage: 15 },
+            rare: { damage: 20 },
+            epic: { damage: 30 },
+            legendary: { damage: 50 }
+        })
         .with_mana_cost_by_rarity({
             common: 15,
-            rare: 20,
-            epic: 30,
-            legendary: 50
+            rare: 18,
+            epic: 22,
+            legendary: 30
         })
         .build(),
     new SpellBuilder()
@@ -719,13 +725,6 @@ const spells = [
             legendary: { radius: 15, damagePerTick: 20 }
         })
         .with_mana_cost_by_rarity({ epic: 40, legendary: 50 })
-        .build(),
-    new SpellBuilder()
-        .with_name('Guardian Angel')
-        .with_cast('anywhere')
-        .with_effect({ type: 'guidance' })
-        .with_params_by_rarity({ legendary: { persistent: true } })
-        .with_mana_cost_by_rarity({ legendary: 100 })
         .build(),
     new SpellBuilder()
         .with_name('Magic Missile')
@@ -745,19 +744,13 @@ const spells = [
         })
         .build(),
     new SpellBuilder()
-        .with_name('Portal')
-        .with_cast('non-battle')
-        .with_effect({ type: 'teleport' })
-        .with_mana_cost_by_rarity({})
-        .build(),
-    new SpellBuilder()
         .with_name('Earthquake')
         .with_cast('battle')
         .with_effect({ type: 'areaDamage', damage: 15 })
         .with_params_by_rarity({
-            rare: { durationMinutes: 1 },
-            epic: { durationMinutes: 2.5 },
-            legendary: { durationMinutes: 5 }
+            rare: { durationTicks: 1 * 60 * 60 },
+            epic: { durationTicks: Math.round(2.5 * 60 * 60) },
+            legendary: { durationTicks: 5 * 60 * 60 }
         })
         .with_mana_cost_by_rarity({ rare: 25, epic: 40, legendary: 60 })
         .build(),
@@ -766,20 +759,26 @@ const spells = [
         .with_cast('battle')
         .with_effect({ type: 'randomEffect' })
         .with_params_by_rarity({
-            rare: { effectPercent: 10, duration: 30 },
-            epic: { effectPercent: 10, duration: 40 },
-            legendary: { effectPercent: 15, duration: 50 }
+            common: { effectPercent: 10, durationTicks: 30 * 60 },
+            rare: { effectPercent: 10, durationTicks: 30 * 60 },
+            epic: { effectPercent: 10, durationTicks: 40 * 60 },
+            legendary: { effectPercent: 15, durationTicks: 50 * 60 }
         })
-        .with_mana_cost_by_rarity({ rare: 30, epic: 40, legendary: 50 })
+        .with_mana_cost_by_rarity({
+            common: 30,
+            rare: 40,
+            epic: 45,
+            legendary: 50
+        })
         .build(),
     new SpellBuilder()
         .with_name("Zeus's Blessing")
         .with_cast('battle')
         .with_effect({ type: 'lightningStorm' })
         .with_params_by_rarity({
-            rare: { targets: 'enemies', durationMinutes: 2 },
-            epic: { targets: 'enemies', durationMinutes: 4 },
-            legendary: { targets: 'enemies', durationMinutes: 8 }
+            rare: { targets: 'enemies and/or the player', durationTicks: 2 * 60 * 60 },
+            epic: { targets: 'enemies', durationTicks: 4 * 60 * 60 },
+            legendary: { targets: 'enemies', durationTicks: 8 * 60 * 60 }
         })
         .with_mana_cost_by_rarity({ rare: 25, epic: 35, legendary: 55 })
         .build(),
@@ -787,7 +786,7 @@ const spells = [
         .with_name('Godlike')
         .with_cast('battle')
         .with_effect({ type: 'omniBuff' })
-        .with_params_by_rarity({ legendary: { durationSeconds: 20 } })
+    .with_params_by_rarity({ legendary: { durationTicks: 20 * 60 } })
         .with_mana_cost_by_rarity({ legendary: 80 })
         .build(),
     new SpellBuilder()
@@ -795,9 +794,9 @@ const spells = [
         .with_cast('battle')
         .with_effect({ type: 'healthTrade' })
         .with_params_by_rarity({
-            rare: { percent: 20 },
-            epic: { percent: 50 },
-            legendary: { percent: 80 }
+            rare: { percent: 0.2 },
+            epic: { percent: 0.5 },
+            legendary: { percent: 0.8 }
         })
         .with_mana_cost_by_rarity({ rare: 0, epic: 0, legendary: 0 })
         .build(),
@@ -806,8 +805,8 @@ const spells = [
         .with_cast('anywhere')
         .with_effect({ type: 'fullRegen' })
         .with_params_by_rarity({
-            epic: { castTimeSeconds: 90 },
-            legendary: { castTimeSeconds: 45 }
+            epic: { castTimeTicks: 90 * 60 },
+            legendary: { castTimeTicks: 45 * 60 }
         })
         .with_mana_cost_by_rarity({ epic: 0, legendary: 0 })
         .build(),
@@ -816,10 +815,10 @@ const spells = [
         .with_cast('battle')
         .with_effect({ type: 'explosiveWithBurn' })
         .with_params_by_rarity({
-            common: { damage: 5, burnSeconds: 4 },
-            rare: { damage: 8, burnSeconds: 8 },
-            epic: { damage: 12, burnSeconds: 10 },
-            legendary: { damage: 24, burnSeconds: 15 }
+            common: { damage: 5, burnTicks: 4 * 60 },
+            rare: { damage: 8, burnTicks: 8 * 60 },
+            epic: { damage: 12, burnTicks: 10 * 60 },
+            legendary: { damage: 24, burnTicks: 15 * 60 }
         })
         .with_mana_cost_by_rarity({
             common: 14,
@@ -843,7 +842,12 @@ const spells = [
         .with_name('Cleanse')
         .with_cast('anywhere')
         .with_effect({ type: 'clearEffects' })
-        .with_mana_cost_by_rarity({ legendary: 75 })
+        .with_mana_cost_by_rarity({
+            common: 0,
+            rare: 0,
+            epic: 0,
+            legendary: 75
+        })
         .build()
 ];
 

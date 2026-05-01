@@ -69,12 +69,14 @@ class Player {
         this.equipped = {
             weapon: null,
             armor: null,
-            accessory: null
+            accessory: null,
+            spells: []
         };
+        this.money = 0;
     }
-    
+
     toJSON() {
-        const { equip, applyAttributes, ...props} = this;
+        const { equip, applyAttributes, ...props } = this;
         return props;
     }
 
@@ -144,10 +146,12 @@ class Player {
 }
 
 /**
- * @template {keyof Player | keyof Player['resistances']} const K
+ * Apply a single attribute key to a player. Keys may be top-level player stats
+ * or named resistances. We accept string keys and any value to keep the
+ * runtime flexible; precise typing causes excessive @ts-check issues here.
  * @param {Player} self
- * @param {K} key
- * @param {K extends keyof Player ? [Player[K], Player[K]] : K extends keyof Player['resistances'] ? [Player['resistances'][K], Player['resistances'][K]] : never} value
+ * @param {string} key
+ * @param {any} value
  */
 function applyAttributeKey(self, key, value) {
     const min = Math.min(Number(value[0]), Number(value[1]));
@@ -184,7 +188,7 @@ function applyAttributeKey(self, key, value) {
         default:
             // unknown key: store on resistances if it exists
             if (key in self.resistances) {
-                self.resistances[key] += v;
+                /** @type {any} */ (self.resistances)[key] += v;
             }
     }
 }
