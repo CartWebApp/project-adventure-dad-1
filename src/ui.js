@@ -81,6 +81,8 @@ function cursor() {
     renderer.ctx.restore();
 }
 
+let locked = false;
+
 /**
  * @param {string} text
  */
@@ -120,6 +122,10 @@ function split_lines(text) {
  * @returns {Promise<T>}
  */
 export function select(text, choices, render_icon = () => {}) {
+    if (locked) {
+        throw new Error('Race condition');
+    }
+    locked = true;
     const { promise, resolve } = Promise.withResolvers();
     let current_choice = 0;
     let resolved = false;
@@ -239,6 +245,7 @@ export function select(text, choices, render_icon = () => {}) {
             }
         });
         if (resolved) {
+            locked = false;
             return;
         }
         return requestAnimationFrame(render);
@@ -288,6 +295,10 @@ export async function dialog(
     render_icon = () => {},
     per_letter_duration = 75
 ) {
+    if (locked) {
+        throw new Error('Race condition');
+    }
+    locked = true;
     await renderer.batch_async(async () => {
         renderer.clear();
         renderer.ctx.strokeStyle = 'white';
@@ -336,12 +347,17 @@ export async function dialog(
             );
         }
     });
+    locked = false;
 }
 
 /**
  * @param {string} text
  */
 export function static_dialog(text) {
+    if (locked) {
+        throw new Error('race condition');
+    }
+    locked = true;
     renderer.batch(() => {
         renderer.clear();
         renderer.ctx.strokeStyle = 'white';
@@ -380,6 +396,7 @@ export function static_dialog(text) {
             y += 20;
         }
     });
+    locked = false;
 }
 
 /**
@@ -396,6 +413,10 @@ export async function input(
     ),
     max_length = 15
 ) {
+    if (locked) {
+        throw new Error('race condition');
+    }
+    locked = true;
     const { promise, resolve } = Promise.withResolvers();
     let value = '';
     let resolved = false;
@@ -493,6 +514,7 @@ export async function input(
         if (!resolved) {
             return requestAnimationFrame(frame);
         }
+        locked = false;
     }
     await frame();
     return promise;

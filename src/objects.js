@@ -249,8 +249,8 @@ export class Image extends Entity {
     constructor(image, { width = 68, height = 68, scale = 1} = {}) {
         super();
         this.scale = scale;
-        this.width = width * scale;
-        this.height = height * height;
+        this.width = width;
+        this.height = height;
         if (Image.cache.has(image)) {
             const { image: cached, outline } = /** @type {{ image: InstanceType<(typeof globalThis)['Image']>; outline: Map<number, Array<{ x: number; y: number }>> }} */ (
                 Image.cache.get(image)
@@ -263,15 +263,11 @@ export class Image extends Entity {
         }
         this.image = new globalThis.Image(width, height);
         this.image.src = image;
-        this.image.width *= scale;
-        this.image.height *= scale;
         this.image.addEventListener(
             'load',
             () => {
                 const cloned = /** @type {HTMLImageElement} */ (this.image.cloneNode(true));
                 console.log(this.image.width);
-                cloned.width /= scale;
-                cloned.height /= scale;
                 this.outline = get_outline(this.image);
                 Image.cache.set(image, {
                     image: cloned,
@@ -288,8 +284,8 @@ export class Image extends Entity {
      * @param {number} y
      */
     render(renderer, x, y) {
-        renderer.ctx.scale(this.scale, this.scale);
-        renderer.ctx.drawImage(this.image, x, y);
+        // renderer.ctx.scale(this.scale, this.scale);
+        renderer.ctx.drawImage(this.image, x, y, this.image.width * this.scale, this.height * this.scale);
     }
 }
 

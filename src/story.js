@@ -794,9 +794,6 @@ export const story = new Parallel(
     )
     .then(
         new Parallel(
-            new Parallel(
-                
-            ),
             new LoopedGroup(
                 new Branch(() => {
                     const random = Math.random();

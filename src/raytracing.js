@@ -314,33 +314,6 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                             entity.lighting
                         );
                     }
-                    // this.ctx.lineWidth = 5;
-                    // this.ctx.strokeStyle = 'white';
-                    // this.ctx.stroke(this.#current_path);
-                    // const path = new Path2D();
-                    // path.moveTo(this.#edges[0].x, this.#edges[0].y);
-                    // for (const point of this.#edges) {
-                    //     path.lineTo(point.x, point.y);
-                    // }
-                    // this.#edges = null;
-                    // this.ctx.lineWidth = 2;
-                    // this.ctx.strokeStyle = 'white';
-                    // this.ctx.stroke(path);
-                    // const path = new Path2D();
-                    // while (this.#edges.length % 2 !== 0) {
-                    //     this.#edges.push(this.#edges[this.#edges.length % 2]);
-                    // }
-                    // while (this.#edges.length > 0) {
-                    //     const cp_1 = this.#edges.shift();
-                    //     const cp_2 = this.#edges.shift();
-                    //     // const cp_3 = this.#edges.shift();
-                    //     path.arcTo(cp_1.x, cp_1.y, cp_2.x, cp_2.y, 5);
-                    //     // path.bezierCurveTo(cp_1.x, cp_1.y, cp_2.x, cp_2.y, cp_3.x, cp_3.y);
-                    // }
-                    // this.ctx.lineWidth = 2;
-                    // this.ctx.strokeStyle = 'white';
-                    // this.ctx.stroke(path);
-                    // this.#edges = null;
                     this.#last_points = null;
                     this.ctx.restore();
                 }

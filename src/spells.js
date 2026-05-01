@@ -1,5 +1,3 @@
-import { dialog } from "./ui";
-
 /**
  * @type {{ [spellName: string]: number[] }}
  */

@@ -361,7 +361,7 @@ async function playerCast(player, enemy, enemies, spellName) {
         fireball: async () => {
             const def = getSpellDef('fireball');
             const cost = resolveManaCost(def, p) || 14;
-            if (!await spendMana(cost)) return;
+            if (!(await spendMana(cost))) return;
             const dmg =
                 resolveParam(def, p, 'damage', 5) +
                 Math.floor(player.luck * 0.02 * 8);
@@ -388,7 +388,7 @@ async function playerCast(player, enemy, enemies, spellName) {
         'mana bolt': async () => {
             const def = getSpellDef('mana bolt');
             const cost = resolveManaCost(def, p) || 15;
-            if (!await spendMana(cost)) return;
+            if (!(await spendMana(cost))) return;
             const dmg =
                 resolveParam(def, p, 'damage', 15) +
                 Math.floor(player.luck * 0.01 * 15);
@@ -399,7 +399,7 @@ async function playerCast(player, enemy, enemies, spellName) {
         'magic missile': async () => {
             const def = getSpellDef('magic missile');
             const cost = resolveManaCost(def, p) || 12;
-            if (!await spendMana(cost)) return;
+            if (!(await spendMana(cost))) return;
             const damage = resolveParam(def, p, 'damage', 18);
             const primary = hitSingle(enemy, damage);
             let splashTotal = 0;
@@ -417,7 +417,7 @@ async function playerCast(player, enemy, enemies, spellName) {
         'black hole': async () => {
             const def = getSpellDef('black hole');
             const cost = resolveManaCost(def, p) || 40;
-            if (!await spendMana(cost)) return;
+            if (!(await spendMana(cost))) return;
             const radius = resolveParam(def, p, 'radius', 10);
             const damagePerTick = resolveParam(def, p, 'damagePerTick', 15);
             const durationTicks = resolveParam(
@@ -446,7 +446,7 @@ async function playerCast(player, enemy, enemies, spellName) {
         earthquake: async () => {
             const def = getSpellDef('earthquake');
             const cost = resolveManaCost(def, p) || 25;
-            if (!await spendMana(cost)) return;
+            if (!(await spendMana(cost))) return;
             const durationTicks = resolveParam(
                 def,
                 p,
@@ -473,7 +473,7 @@ async function playerCast(player, enemy, enemies, spellName) {
         'blessing of life': async () => {
             const def = getSpellDef('blessing of life');
             const cost = resolveManaCost(def, p) || 0;
-            if (!await spendMana(cost)) return;
+            if (!(await spendMana(cost))) return;
             const castTimeTicks = resolveParam(
                 def,
                 p,
@@ -492,7 +492,7 @@ async function playerCast(player, enemy, enemies, spellName) {
         cleanse: async () => {
             const def = getSpellDef('cleanse');
             const cost = resolveManaCost(def, p) || 10;
-            if (!await spendMana(cost)) return;
+            if (!(await spendMana(cost))) return;
             p.effects = p.effects || [];
             // keep only positive effects
             const newEff = [];
@@ -507,7 +507,7 @@ async function playerCast(player, enemy, enemies, spellName) {
         'bloody exchange': async () => {
             const def = getSpellDef('bloody exchange');
             const cost = resolveManaCost(def, p) || 0;
-            if (!await spendMana(cost)) return;
+            if (!(await spendMana(cost))) return;
             const percent = resolveParam(def, p, 'percent', 0.2);
             const curr = p.current_health ?? p.health;
             const sacrifice = Math.max(1, Math.round(curr * percent));
@@ -533,7 +533,7 @@ async function playerCast(player, enemy, enemies, spellName) {
         'curse of the plague': async () => {
             const def = getSpellDef('curse of the plague');
             const cost = resolveManaCost(def, p) || 30;
-            if (!await spendMana(cost)) return;
+            if (!(await spendMana(cost))) return;
             const effectPercent = resolveParam(def, p, 'effectPercent', 10);
             const durationTicks = resolveParam(
                 def,
@@ -563,7 +563,7 @@ async function playerCast(player, enemy, enemies, spellName) {
         "zeus's blessing": async () => {
             const def = getSpellDef("zeus's blessing");
             const cost = resolveManaCost(def, p) || 25;
-            if (!await spendMana(cost)) return;
+            if (!(await spendMana(cost))) return;
             const durationMinutes = resolveParam(def, p, 'durationMinutes', 2);
             // choose number of strikes based on rarity
             const rarity = getPlayerSpellRarity(p, name);
@@ -587,7 +587,7 @@ async function playerCast(player, enemy, enemies, spellName) {
         'raise dead': async () => {
             const def = getSpellDef('raise dead');
             const cost = resolveManaCost(def, p) || 45;
-            if (!await spendMana(cost)) return;
+            if (!(await spendMana(cost))) return;
             const count = resolveParam(def, p, 'count', 2);
             // For simplicity, heal a small amount per summoned ally
             const heal = Math.min(player.max_life, 5 * count);
@@ -599,7 +599,7 @@ async function playerCast(player, enemy, enemies, spellName) {
 
         godlike: async () => {
             const cost = 80;
-            if (!await spendMana(cost)) return;
+            if (!(await spendMana(cost))) return;
             // apply strong buff to player
             const buff = {
                 name: 'Godlike',
@@ -703,6 +703,14 @@ class Combat {
         return new Promise(resolve => {
             /** @type {any} */
             const player = this.player;
+            Game.current.renderer.batch(() => {
+                Game.current.renderer.clear();
+                Game.current.renderer.entity(
+                    player.get_entity(ORIENTATIONS.NORTHEAST, 10),
+                    Game.current.renderer.width * 0.25,
+                    Game.current.renderer.height * 0.1
+                );
+            });
             /** @type {any[]} */
             const enemies = this.enemies || [];
             /** @type {string[]} */
@@ -721,8 +729,6 @@ class Combat {
 
             // tick function that runs one logical tick
             const doTick = async () => {
-                Game.current.renderer.clear();
-                Game.current.renderer.entity(player.get_entity(ORIENTATIONS.SOUTHWEST, 5), Game.current.renderer.width * 0.75, Game.current.renderer.height * 0.5);
                 // process effects
                 processEffects(player);
                 for (const e of enemies) processEffects(e);
@@ -740,14 +746,24 @@ class Combat {
                         // choose action
                         if (player.stamina < 10 && player.mana < 12) {
                             await playerMelee(player, target);
-                        } else if (await select('Do you want to perform a spell or melee attack?', ['Spell', 'Melee']) === 'Melee') {
+                        } else if (
+                            (await select(
+                                'Do you want to perform a spell or melee attack?',
+                                ['Spell', 'Melee']
+                            )) === 'Melee'
+                        ) {
                             await playerMelee(player, target);
                         } else {
                             await playerCast(
                                 player,
                                 target,
                                 enemies,
-                                await select('Choose an attack.', Object.keys(SPELLS).map(name => name.toLowerCase()))
+                                await select(
+                                    'Choose an attack.',
+                                    Object.keys(SPELLS).map(name =>
+                                        name.toLowerCase()
+                                    )
+                                )
                             );
                         }
                     }
@@ -798,46 +814,53 @@ class Combat {
                 }
                 return false;
             };
-
-            // If running in a browser, use requestAnimationFrame with a fixed timestep accumulator
-            const rAF =
-                typeof window !== 'undefined' &&
-                typeof window.requestAnimationFrame === 'function';
-            if (rAF) {
-                let last =
-                    typeof performance !== 'undefined' && performance.now
-                        ? performance.now()
-                        : Date.now();
-                let acc = 0;
-                let rafId = 0;
-                /** @param {number} now */
-                const frame = async now => {
-                    acc += now - last;
-                    last = now;
-                    while (acc >= fixedDt) {
-                        await doTick();
-                        acc -= fixedDt;
-                    }
-                    if (await checkEnd()) {
-                        if (
-                            typeof window !== 'undefined' &&
-                            typeof window.cancelAnimationFrame === 'function'
-                        )
-                            window.cancelAnimationFrame(rafId);
-                        return;
-                    }
-                    rafId = window.requestAnimationFrame(frame);
-                };
-                rafId = window.requestAnimationFrame(frame);
-            } else {
-                // Node or non-browser environment: fallback to setInterval at configured tickIntervalMs (default ~16ms)
-                const interval = setInterval(async () => {
-                    await doTick();
-                    if (await checkEnd()) {
-                        clearInterval(interval);
-                    }
-                }, this.tickIntervalMs);
+            async function loop() {
+                await doTick();
+                if (await checkEnd()) {
+                    return;
+                }
+                requestAnimationFrame(loop);
             }
+            requestAnimationFrame(loop);
+            // // If running in a browser, use requestAnimationFrame with a fixed timestep accumulator
+            // const rAF =
+            //     typeof window !== 'undefined' &&
+            //     typeof window.requestAnimationFrame === 'function';
+            // if (rAF) {
+            //     let last =
+            //         typeof performance !== 'undefined' && performance.now
+            //             ? performance.now()
+            //             : Date.now();
+            //     let acc = 0;
+            //     let rafId = 0;
+            //     /** @param {number} now */
+            //     const frame = async now => {
+            //         acc += now - last;
+            //         last = now;
+            //         while (acc >= fixedDt) {
+            //             await doTick();
+            //             acc -= fixedDt;
+            //         }
+            //         if (await checkEnd()) {
+            //             if (
+            //                 typeof window !== 'undefined' &&
+            //                 typeof window.cancelAnimationFrame === 'function'
+            //             )
+            //                 window.cancelAnimationFrame(rafId);
+            //             return;
+            //         }
+            //         rafId = window.requestAnimationFrame(frame);
+            //     };
+            //     rafId = window.requestAnimationFrame(frame);
+            // } else {
+            //     // Node or non-browser environment: fallback to setInterval at configured tickIntervalMs (default ~16ms)
+            //     const interval = setInterval(async () => {
+            //         await doTick();
+            //         if (await checkEnd()) {
+            //             clearInterval(interval);
+            //         }
+            //     }, this.tickIntervalMs);
+            // }
         });
     }
 }
