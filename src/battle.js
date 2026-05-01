@@ -11,6 +11,7 @@ import { TICKS_PER_SEC } from './combat.js';
 import { dialog, input, select } from './ui.js';
 import { Game } from './game.js';
 import { ORIENTATIONS } from './constants.js';
+import { SPELLS } from './spells.js';
 
 /** @type {{EASY:'easy', MEDIUM:'medium', HARD:'hard'}} */
 const DIFFICULTY = {
