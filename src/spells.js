@@ -31,4 +31,4 @@ async function castSpell(spellName) {
     }
     return spellName;
 }
-export { SPELLS, castSpell };
+export { castSpell };
