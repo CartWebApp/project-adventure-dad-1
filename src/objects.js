@@ -189,7 +189,7 @@ function get_outline(image) {
     canvas.width = image.width;
     canvas.height = image.height;
     ctx.clearRect(0, 0, image.width, image.height);
-    ctx.drawImage(image, 0, 0);
+    ctx.drawImage(image, 0, 0, image.width, image.height);
     const data = ctx.getImageData(0, 0, image.width, image.height);
     const outline = [];
     for (let index = 0; index < data.data.length; index += 4) {
@@ -233,33 +233,49 @@ function get_outline(image) {
 }
 
 export class Image extends Entity {
-    /** @type {Map<string, { image: InstanceType<(typeof globalThis)['Image']>; outline: Array<{ x: number; y: number }> }>} */
+    /** @type {Map<string, { image: InstanceType<(typeof globalThis)['Image']>; outline: Map<number, Array<{ x: number; y: number }>> }>} */
     static cache = new Map();
     /** @type {Array<{ x: number; y: number }>} */
     outline = [];
+    /** @type {InstanceType<typeof globalThis['Image']>} */
     image;
+    width;
+    height;
+    scale;
 
     /**
      * @param {string} image
      */
-    constructor(image) {
+    constructor(image, { width = 68, height = 68, scale = 1} = {}) {
         super();
+        this.scale = scale;
+        this.width = width * scale;
+        this.height = height * height;
         if (Image.cache.has(image)) {
-            ({ image: this.image, outline: this.outline } =
-                /** @type {{ image: InstanceType<(typeof globalThis)['Image']>; outline: Array<{ x: number; y: number }> }} */ (
-                    Image.cache.get(image)
-                ));
+            const { image: cached, outline } = /** @type {{ image: InstanceType<(typeof globalThis)['Image']>; outline: Map<number, Array<{ x: number; y: number }>> }} */ (
+                Image.cache.get(image)
+            );
+            this.image = /** @type {HTMLImageElement} */ (cached.cloneNode(true));
+            this.image.width *= scale;
+            this.image.height *= scale;
+            this.outline = outline.has(scale) ? /** @type {Array<{ x: number; y: number }>} */ (outline.get(scale)) : get_outline(this.image);
             return;
         }
-        this.image = new globalThis.Image();
+        this.image = new globalThis.Image(width, height);
         this.image.src = image;
+        this.image.width *= scale;
+        this.image.height *= scale;
         this.image.addEventListener(
             'load',
             () => {
+                const cloned = /** @type {HTMLImageElement} */ (this.image.cloneNode(true));
+                console.log(this.image.width);
+                cloned.width /= scale;
+                cloned.height /= scale;
                 this.outline = get_outline(this.image);
                 Image.cache.set(image, {
-                    image: this.image,
-                    outline: this.outline
+                    image: cloned,
+                    outline: new Map([[scale, this.outline]])
                 });
             },
             { once: true }
@@ -272,6 +288,7 @@ export class Image extends Entity {
      * @param {number} y
      */
     render(renderer, x, y) {
+        renderer.ctx.scale(this.scale, this.scale);
         renderer.ctx.drawImage(this.image, x, y);
     }
 }

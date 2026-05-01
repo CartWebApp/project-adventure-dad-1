@@ -3,7 +3,7 @@ import { dialog } from "./ui";
 /**
  * @type {{ [spellName: string]: number[] }}
  */
-const SPELLS = {
+export const SPELLS = {
     'Mana Bolt': [3, 2, 1],
     'Magic Missile': [2, 4, 6],
     'Fireball': [5, 4, 1],

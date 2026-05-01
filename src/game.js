@@ -1,5 +1,6 @@
 import { DIFFICULTY } from './battle.js';
 import { Player } from './character.js';
+import { ORIENTATIONS } from './constants.js';
 import { RaytracingRenderer } from './raytracing.js';
 import { Step, story } from './story.js';
 
@@ -65,6 +66,27 @@ export class Game {
         Game.current ??= this;
         this.renderer = renderer;
         this.load();
+        document.body.addEventListener('keydown', e => {
+            console.log(e.key);
+            if (e.key === 'ArrowLeft') {
+                this.player.direction = ORIENTATIONS.WEST;
+                this.player.x--;
+            } else if (e.key === 'ArrowRight') {
+                this.player.direction = ORIENTATIONS.EAST;
+                this.player.x++;
+            } else {
+                this.player.direction = this.player.direction === ORIENTATIONS.WEST ? ORIENTATIONS.NORTHWEST : this.player.direction === ORIENTATIONS.EAST ? ORIENTATIONS.NORTHEAST : this.player.direction;
+            }
+            console.log(this.player.x);
+        });
+        document.body.addEventListener('keyup', e => {
+            if (e.key === 'ArrowLeft') {
+                this.player.direction = ORIENTATIONS.NORTHWEST;
+            } else if (e.key === 'ArrowRight') {
+                this.player.direction = ORIENTATIONS.NORTHEAST;
+            }
+            console.log(this.player.x);
+        });
         if (this.current_step !== null) {
             return;
         }

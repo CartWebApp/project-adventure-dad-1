@@ -9,6 +9,10 @@ import { spells as SPELL_DEFINITIONS } from './obtainables.js';
 import { Player } from './character.js';
 import { TICKS_PER_SEC } from './combat.js';
 import { castSpell as correctSpellCast } from './spells.js';
+import { dialog, input, select } from './ui.js';
+import { Game } from './game.js';
+import { ORIENTATIONS } from './constants.js';
+import { SPELLS } from './spells.js';
 
 /** @type {{EASY:'easy', MEDIUM:'medium', HARD:'hard'}} */
 const DIFFICULTY = {
@@ -116,9 +120,8 @@ function applyEffect(target, effect) {
 /**
  * Process active effects for one tick (1 second)
  * @param {any} actor
- * @param {Array<string>} log
  */
-function processEffects(actor, log) {
+async function processEffects(actor) {
     if (!actor.effects || actor.effects.length === 0) return;
     const remaining = [];
     for (const e of actor.effects) {
@@ -136,7 +139,7 @@ function processEffects(actor, log) {
             if (apply > 0) {
                 applyDamage(actor, apply);
                 actor._dot_acc -= apply;
-                log.push(
+                await dialog(
                     `${actor.name || 'Player'} takes ${apply} ${e.name} damage.`
                 );
             }
@@ -156,9 +159,8 @@ function processEffects(actor, log) {
  * Simple enemy AI
  * @param {any} enemy
  * @param {any} player
- * @param {Array<string>} log
  */
-function enemyAct(enemy, player, log) {
+async function enemyAct(enemy, player) {
     // skip dead
     if (enemy.current_health <= 0) return;
 
@@ -172,22 +174,22 @@ function enemyAct(enemy, player, log) {
     const name = String(chosen || '').toLowerCase();
     if (name.includes('poison')) {
         applyEffect(player, COMBAT_EFFECTS.poison(1));
-        log.push(`${enemy.name} uses ${chosen} — applied Poison.`);
+        await dialog(`${enemy.name} uses ${chosen} — applied Poison.`);
     } else if (name.includes('burn')) {
         applyEffect(player, COMBAT_EFFECTS.burning(5, 2));
-        log.push(`${enemy.name} uses ${chosen} — applied Burning.`);
+        await dialog(`${enemy.name} uses ${chosen} — applied Burning.`);
     } else if (name.includes('petrif') || name.includes('petrified')) {
         applyEffect(player, COMBAT_EFFECTS.petrified(3));
-        log.push(`${enemy.name} uses ${chosen} — applied Petrified.`);
+        await dialog(`${enemy.name} uses ${chosen} — applied Petrified.`);
     } else if (name.includes('stun') || name.includes('shocked')) {
         applyEffect(player, COMBAT_EFFECTS.shocked(2));
-        log.push(`${enemy.name} uses ${chosen} — applied Shocked.`);
+        await dialog(`${enemy.name} uses ${chosen} — applied Shocked.`);
     } else {
         // default: basic damage
         const base = Math.max(3, Math.round(enemy.health * 0.03));
         const { final } = calculateDamage(enemy, player, base);
         applyDamage(player, final);
-        log.push(`${enemy.name} hits for ${final} damage.`);
+        await dialog(`${enemy.name} hits for ${final} damage.`);
     }
 }
 
@@ -201,9 +203,8 @@ function enemyAct(enemy, player, log) {
  * Player melee attack
  * @param {any} player
  * @param {any} enemy
- * @param {Array<string>} log
  */
-function playerMelee(player, enemy, log) {
+async function playerMelee(player, enemy) {
     // Determine stamina cost from equipped weapon (by rarity) or default
     /** @type {any} */
     const weapon = player.equipped?.weapon;
@@ -225,7 +226,7 @@ function playerMelee(player, enemy, log) {
         const base = 3;
         const { final } = calculateDamage(player, enemy, base);
         applyDamage(enemy, final);
-        log.push(`Weak strike deals ${final} damage (low stamina).`);
+        await dialog(`Weak strike deals ${final} damage (low stamina).`);
         return;
     }
     player.stamina -= staminaCost;
@@ -236,7 +237,7 @@ function playerMelee(player, enemy, log) {
     const base = Math.round(weaponDamage + player.luck * 0.01 * weaponDamage);
     const { final } = calculateDamage(player, enemy, base);
     applyDamage(enemy, final);
-    log.push(`You strike ${enemy.name} for ${final} damage.`);
+    await dialog(`You strike ${enemy.name} for ${final} damage.`);
 }
 
 /**
@@ -245,9 +246,8 @@ function playerMelee(player, enemy, log) {
  * @param {any} enemy - primary target (may be null for AoE spells)
  * @param {Array<any>} enemies - full enemies array for AoE spells
  * @param {string} spellName
- * @param {Array<string>} log
  */
-function playerCast(player, enemy, enemies, spellName, log) {
+async function playerCast(player, enemy, enemies, spellName) {
     const name = String(spellName || '').toLowerCase();
 
     /** @param {string} n */
@@ -335,9 +335,9 @@ function playerCast(player, enemy, enemies, spellName, log) {
     /** @type {any} */
     const p = player;
     /** @param {number} cost */
-    const spendMana = cost => {
+    const spendMana = async cost => {
         if ((player.mana || 0) < cost) {
-            log.push('Not enough mana.');
+            await dialog('Not enough mana.');
             return false;
         }
         player.mana -= cost;
@@ -358,10 +358,10 @@ function playerCast(player, enemy, enemies, spellName, log) {
     // Spell handlers
     /** @type {Record<string, ()=>void>} */
     const handlers = {
-        fireball: () => {
+        fireball: async () => {
             const def = getSpellDef('fireball');
             const cost = resolveManaCost(def, p) || 14;
-            if (!spendMana(cost)) return;
+            if (!await spendMana(cost)) return;
             const dmg =
                 resolveParam(def, p, 'damage', 5) +
                 Math.floor(player.luck * 0.02 * 8);
@@ -380,26 +380,26 @@ function playerCast(player, enemy, enemies, spellName, log) {
             const dealt = hitSingle(enemy, dmg);
             applyEffect(enemy, COMBAT_EFFECTS.burning(burnTicks, burnPerTick));
             const burnSecsHuman = Math.round(burnTicks / TICKS_PER_SEC);
-            log.push(
+            await dialog(
                 `${spellName} hits ${enemy.name} for ${dealt} and applies Burning (${burnSecsHuman}s).`
             );
         },
 
-        'mana bolt': () => {
+        'mana bolt': async () => {
             const def = getSpellDef('mana bolt');
             const cost = resolveManaCost(def, p) || 15;
-            if (!spendMana(cost)) return;
+            if (!await spendMana(cost)) return;
             const dmg =
                 resolveParam(def, p, 'damage', 15) +
                 Math.floor(player.luck * 0.01 * 15);
             const dealt = hitSingle(enemy, dmg);
-            log.push(`${spellName} deals ${dealt} damage.`);
+            await dialog(`${spellName} deals ${dealt} damage.`);
         },
 
-        'magic missile': () => {
+        'magic missile': async () => {
             const def = getSpellDef('magic missile');
             const cost = resolveManaCost(def, p) || 12;
-            if (!spendMana(cost)) return;
+            if (!await spendMana(cost)) return;
             const damage = resolveParam(def, p, 'damage', 18);
             const primary = hitSingle(enemy, damage);
             let splashTotal = 0;
@@ -409,15 +409,15 @@ function playerCast(player, enemy, enemies, spellName, log) {
                 applyDamage(e, s);
                 splashTotal += s;
             }
-            log.push(
+            await dialog(
                 `${spellName} hits ${enemy.name} for ${primary} (+${splashTotal} splash).`
             );
         },
 
-        'black hole': () => {
+        'black hole': async () => {
             const def = getSpellDef('black hole');
             const cost = resolveManaCost(def, p) || 40;
-            if (!spendMana(cost)) return;
+            if (!await spendMana(cost)) return;
             const radius = resolveParam(def, p, 'radius', 10);
             const damagePerTick = resolveParam(def, p, 'damagePerTick', 15);
             const durationTicks = resolveParam(
@@ -438,15 +438,15 @@ function playerCast(player, enemy, enemies, spellName, log) {
                 total += Math.round(damagePerTick * durationTicks);
             }
             const durationSecsHuman = Math.round(durationTicks / TICKS_PER_SEC);
-            log.push(
+            await dialog(
                 `${spellName} creates a black hole (r=${radius}) dealing ${damagePerTick}/tick for ${durationSecsHuman}s to nearby enemies.`
             );
         },
 
-        earthquake: () => {
+        earthquake: async () => {
             const def = getSpellDef('earthquake');
             const cost = resolveManaCost(def, p) || 25;
-            if (!spendMana(cost)) return;
+            if (!await spendMana(cost)) return;
             const durationTicks = resolveParam(
                 def,
                 p,
@@ -465,15 +465,15 @@ function playerCast(player, enemy, enemies, spellName, log) {
             const durationMinsHuman = Math.round(
                 durationTicks / (60 * TICKS_PER_SEC)
             );
-            log.push(
+            await dialog(
                 `${spellName} shakes the ground for ${total} damage and applies Withering for ${durationMinsHuman} minutes.`
             );
         },
 
-        'blessing of life': () => {
+        'blessing of life': async () => {
             const def = getSpellDef('blessing of life');
             const cost = resolveManaCost(def, p) || 0;
-            if (!spendMana(cost)) return;
+            if (!await spendMana(cost)) return;
             const castTimeTicks = resolveParam(
                 def,
                 p,
@@ -484,15 +484,15 @@ function playerCast(player, enemy, enemies, spellName, log) {
             p.current_health = p.max_life;
             p.health = p.current_health;
             const castTimeHuman = Math.round(castTimeTicks / TICKS_PER_SEC);
-            log.push(
+            await dialog(
                 `${spellName} restores you to full health (cast time ${castTimeHuman}s).`
             );
         },
 
-        cleanse: () => {
+        cleanse: async () => {
             const def = getSpellDef('cleanse');
             const cost = resolveManaCost(def, p) || 10;
-            if (!spendMana(cost)) return;
+            if (!await spendMana(cost)) return;
             p.effects = p.effects || [];
             // keep only positive effects
             const newEff = [];
@@ -501,13 +501,13 @@ function playerCast(player, enemy, enemies, spellName, log) {
                     newEff.push(ef);
             }
             p.effects = newEff;
-            log.push(`${spellName} clears negative effects.`);
+            await dialog(`${spellName} clears negative effects.`);
         },
 
-        'bloody exchange': () => {
+        'bloody exchange': async () => {
             const def = getSpellDef('bloody exchange');
             const cost = resolveManaCost(def, p) || 0;
-            if (!spendMana(cost)) return;
+            if (!await spendMana(cost)) return;
             const percent = resolveParam(def, p, 'percent', 0.2);
             const curr = p.current_health ?? p.health;
             const sacrifice = Math.max(1, Math.round(curr * percent));
@@ -523,15 +523,17 @@ function playerCast(player, enemy, enemies, spellName, log) {
                 applyDamage(e, final);
                 total += final;
             }
-            log.push(
-                `${spellName} trades ${sacrifice} HP (${Math.round(percent * 100)}%) to deal ${total} total damage.`
+            await dialog(
+                `${spellName} trades ${sacrifice} HP (${Math.round(
+                    percent * 100
+                )}%) to deal ${total} total damage.`
             );
         },
 
-        'curse of the plague': () => {
+        'curse of the plague': async () => {
             const def = getSpellDef('curse of the plague');
             const cost = resolveManaCost(def, p) || 30;
-            if (!spendMana(cost)) return;
+            if (!await spendMana(cost)) return;
             const effectPercent = resolveParam(def, p, 'effectPercent', 10);
             const durationTicks = resolveParam(
                 def,
@@ -553,15 +555,15 @@ function playerCast(player, enemy, enemies, spellName, log) {
                     durationTicks;
             }
             const durationSecsHuman = Math.round(durationTicks / TICKS_PER_SEC);
-            log.push(
+            await dialog(
                 `${spellName} afflicts ${enemy.name} (effect ${effectPercent}%, ${durationSecsHuman}s).`
             );
         },
 
-        "zeus's blessing": () => {
+        "zeus's blessing": async () => {
             const def = getSpellDef("zeus's blessing");
             const cost = resolveManaCost(def, p) || 25;
-            if (!spendMana(cost)) return;
+            if (!await spendMana(cost)) return;
             const durationMinutes = resolveParam(def, p, 'durationMinutes', 2);
             // choose number of strikes based on rarity
             const rarity = getPlayerSpellRarity(p, name);
@@ -577,27 +579,27 @@ function playerCast(player, enemy, enemies, spellName, log) {
                 applyDamage(e, final);
                 total += final;
             }
-            log.push(
+            await dialog(
                 `${spellName} strikes ${strikes} times over ${durationMinutes}m for ${total} total damage.`
             );
         },
 
-        'raise dead': () => {
+        'raise dead': async () => {
             const def = getSpellDef('raise dead');
             const cost = resolveManaCost(def, p) || 45;
-            if (!spendMana(cost)) return;
+            if (!await spendMana(cost)) return;
             const count = resolveParam(def, p, 'count', 2);
             // For simplicity, heal a small amount per summoned ally
             const heal = Math.min(player.max_life, 5 * count);
             player.health = Math.min(player.max_life, player.health + heal);
-            log.push(
+            await dialog(
                 `${spellName} summons ${count} undead and heals you for ${heal}.`
             );
         },
 
-        godlike: () => {
+        godlike: async () => {
             const cost = 80;
-            if (!spendMana(cost)) return;
+            if (!await spendMana(cost)) return;
             // apply strong buff to player
             const buff = {
                 name: 'Godlike',
@@ -607,26 +609,26 @@ function playerCast(player, enemy, enemies, spellName, log) {
                 damageReduction: 25
             };
             applyEffect(player, buff);
-            log.push(
+            await dialog(
                 `${spellName} grants you godlike power for ${buff.duration}s.`
             );
         },
 
-        default: () => {
+        default: async () => {
             // fallback
-            log.push('Spell has no implementation.');
+            await dialog('Spell has no implementation.');
         }
     };
 
     // find matching handler
     for (const key of Object.keys(handlers)) {
         if (name.includes(key.replace(/\(default\)/, '').trim())) {
-            handlers[key]();
+            await handlers[key]();
             return;
         }
     }
 
-    log.push('Not a known spell.');
+    await dialog('Not a known spell.');
 }
 
 /**
@@ -718,10 +720,12 @@ class Combat {
             const fixedDt = 1000 / 60; // ms per tick (60Hz)
 
             // tick function that runs one logical tick
-            const doTick = () => {
+            const doTick = async () => {
+                Game.current.renderer.clear();
+                Game.current.renderer.entity(player.get_entity(ORIENTATIONS.SOUTHWEST, 5), Game.current.renderer.width * 0.75, Game.current.renderer.height * 0.5);
                 // process effects
-                processEffects(player, log);
-                for (const e of enemies) processEffects(e, log);
+                processEffects(player);
+                for (const e of enemies) processEffects(e);
 
                 // apply regeneration
                 applyRegeneration(player, enemies);
@@ -734,18 +738,17 @@ class Combat {
                     const target = aliveEnemies[0];
                     if (target) {
                         // choose action
-                        if (player.stamina >= 10) {
-                            playerMelee(player, target, log);
-                        } else if (player.mana >= 12) {
-                            playerCast(
+                        if (player.stamina < 10 && player.mana < 12) {
+                            await playerMelee(player, target);
+                        } else if (await select('Do you want to perform a spell or melee attack?', ['Spell', 'Melee']) === 'Melee') {
+                            await playerMelee(player, target);
+                        } else {
+                            await playerCast(
                                 player,
                                 target,
                                 enemies,
-                                'Magic Missile',
-                                log
+                                await select('Choose an attack.', Object.keys(SPELLS).map(name => name.toLowerCase()))
                             );
-                        } else {
-                            playerMelee(player, target, log);
                         }
                     }
                     // Player action code goes here -------------------------------->
@@ -759,7 +762,7 @@ class Combat {
                             : 3.0;
                     const actChance = Math.min(1, 1 / Math.max(0.5, speed));
                     if (Math.random() < actChance) {
-                        enemyAct(e, player, log);
+                        await enemyAct(e, player);
                     }
                 }
 
@@ -779,11 +782,11 @@ class Combat {
             };
 
             // end check helper
-            const checkEnd = () => {
+            const checkEnd = async () => {
                 const anyEnemyAlive = enemies.some(e => e.current_health > 0);
                 const playerAlive = player.current_health > 0;
                 if (!playerAlive || !anyEnemyAlive) {
-                    log.push(
+                    await dialog(
                         playerAlive && !anyEnemyAlive
                             ? 'You won the battle!'
                             : 'You were defeated...'
@@ -808,14 +811,14 @@ class Combat {
                 let acc = 0;
                 let rafId = 0;
                 /** @param {number} now */
-                const frame = now => {
+                const frame = async now => {
                     acc += now - last;
                     last = now;
                     while (acc >= fixedDt) {
-                        doTick();
+                        await doTick();
                         acc -= fixedDt;
                     }
-                    if (checkEnd()) {
+                    if (await checkEnd()) {
                         if (
                             typeof window !== 'undefined' &&
                             typeof window.cancelAnimationFrame === 'function'
@@ -828,9 +831,9 @@ class Combat {
                 rafId = window.requestAnimationFrame(frame);
             } else {
                 // Node or non-browser environment: fallback to setInterval at configured tickIntervalMs (default ~16ms)
-                const interval = setInterval(() => {
-                    doTick();
-                    if (checkEnd()) {
+                const interval = setInterval(async () => {
+                    await doTick();
+                    if (await checkEnd()) {
                         clearInterval(interval);
                     }
                 }, this.tickIntervalMs);

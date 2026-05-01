@@ -19,3 +19,13 @@ export const CHARACTER_CHOICES = /** @type {const} */ ({
     SLAVE: 2,
     BEGGAR: 3
 });
+export const ORIENTATIONS = /** @type {const} */ ({
+    NORTH: 'north',
+    SOUTH: 'south',
+    WEST: 'west',
+    EAST: 'east',
+    NORTHWEST: 'north-west',
+    NORTHEAST: 'north-east',
+    SOUTHWEST: 'south-west',
+    SOUTHEAST: 'south-east',
+});
