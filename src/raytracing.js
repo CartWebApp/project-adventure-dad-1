@@ -239,8 +239,8 @@ export class RaytracingRenderer extends Renderer.Offscreen {
     async #render() {
         const entities = [...this.#entities];
         this.#entities.length = 0;
-        this.#hidden_frame.style.zIndex = 2;
-        this.#current_frame.style.zIndex = 1;
+        this.#hidden_frame.style.zIndex = '2';
+        this.#current_frame.style.zIndex = '1';
         [this.#current_ctx, this.#hidden_ctx] = [
             this.#hidden_ctx,
             this.#current_ctx
@@ -251,96 +251,101 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         ];
         this.display = this.#hidden_frame;
         this.display_ctx = this.#hidden_ctx;
-        super.batch(() => {
-            super.clear();
-            this.#background(this);
-            // console.log(this.#map);
-            for (const e of entities) {
-                const { entity, x, y } = e;
-                this.ctx.save();
-                const points = entity.outline
-                    .map(point => ({ x: point.x + x, y: point.y + y }))
-                    .flatMap((point, i, array) =>
-                        points_between(
-                            point,
-                            array[i + 1] ?? array[0],
-                            this.precision
-                        )
+        try {
+            super.batch(() => {
+                super.clear();
+                this.#background(this);
+                // console.log(this.#map);
+                for (const e of entities) {
+                    const { entity, x, y } = e;
+                    this.ctx.save();
+                    const points = entity.outline
+                        .map(point => ({ x: point.x + x, y: point.y + y }))
+                        .flatMap((point, i, array) =>
+                            points_between(
+                                point,
+                                array[i + 1] ?? array[0],
+                                this.precision
+                            )
+                        );
+                    if (this.#is_on_screen(e)) {
+                        entity.render(this, x, y);
+                    }
+                    // TODO make this better
+                    // we need to accurately determine whether it is safe to skip the raytracing of an entity
+                    // if (entity.lighting.level === 0 && entity.lighting.absorption === 1) {
+                    //     this.ctx.restore();
+                    //     continue;
+                    // }
+                    // console.log(entity);
+                    if (
+                        entity.lighting.start_angle ===
+                            entity.lighting.end_angle ||
+                        entity.lighting.level === 0
+                    ) {
+                        this.ctx.restore();
+                        continue;
+                    }
+                    /** points from which to start raytracing */
+                    const raytracing_points = slice(
+                        points,
+                        entity.lighting.start_angle,
+                        entity.lighting.end_angle
                     );
-                if (this.#is_on_screen(e)) {
-                    entity.render(this, x, y);
-                }
-                // TODO make this better
-                // we need to accurately determine whether it is safe to skip the raytracing of an entity
-                // if (entity.lighting.level === 0 && entity.lighting.absorption === 1) {
-                //     this.ctx.restore();
-                //     continue;
-                // }
-                // console.log(entity);
-                if (
-                    entity.lighting.start_angle === entity.lighting.end_angle ||
-                    entity.lighting.level === 0
-                ) {
+                    raytracing_points.push(raytracing_points[0]);
+                    // console.log({raytracing_points});
+                    // console.log(raytracing_points);
+                    const origin = center(...points);
+                    // this.#image = this.ctx.getImageData(0, 0, this.width, this.height);
+                    for (const point of raytracing_points) {
+                        const [rise, run] = slope(origin, point);
+                        this.#trace_ray(
+                            e.entity,
+                            point.x,
+                            point.y,
+                            run / this.precision,
+                            rise / this.precision,
+                            entity.lighting
+                        );
+                    }
+                    // this.ctx.lineWidth = 5;
+                    // this.ctx.strokeStyle = 'white';
+                    // this.ctx.stroke(this.#current_path);
+                    // const path = new Path2D();
+                    // path.moveTo(this.#edges[0].x, this.#edges[0].y);
+                    // for (const point of this.#edges) {
+                    //     path.lineTo(point.x, point.y);
+                    // }
+                    // this.#edges = null;
+                    // this.ctx.lineWidth = 2;
+                    // this.ctx.strokeStyle = 'white';
+                    // this.ctx.stroke(path);
+                    // const path = new Path2D();
+                    // while (this.#edges.length % 2 !== 0) {
+                    //     this.#edges.push(this.#edges[this.#edges.length % 2]);
+                    // }
+                    // while (this.#edges.length > 0) {
+                    //     const cp_1 = this.#edges.shift();
+                    //     const cp_2 = this.#edges.shift();
+                    //     // const cp_3 = this.#edges.shift();
+                    //     path.arcTo(cp_1.x, cp_1.y, cp_2.x, cp_2.y, 5);
+                    //     // path.bezierCurveTo(cp_1.x, cp_1.y, cp_2.x, cp_2.y, cp_3.x, cp_3.y);
+                    // }
+                    // this.ctx.lineWidth = 2;
+                    // this.ctx.strokeStyle = 'white';
+                    // this.ctx.stroke(path);
+                    // this.#edges = null;
+                    this.#last_points = null;
                     this.ctx.restore();
-                    continue;
                 }
-                /** points from which to start raytracing */
-                const raytracing_points = slice(
-                    points,
-                    entity.lighting.start_angle,
-                    entity.lighting.end_angle
-                );
-                raytracing_points.push(raytracing_points[0]);
-                // console.log({raytracing_points});
-                // console.log(raytracing_points);
-                const origin = center(...points);
-                // this.#image = this.ctx.getImageData(0, 0, this.width, this.height);
-                for (const point of raytracing_points) {
-                    const [rise, run] = slope(origin, point);
-                    this.#trace_ray(
-                        e.entity,
-                        point.x,
-                        point.y,
-                        run / this.precision,
-                        rise / this.precision,
-                        entity.lighting
-                    );
-                }
-                // this.ctx.lineWidth = 5;
-                // this.ctx.strokeStyle = 'white';
-                // this.ctx.stroke(this.#current_path);
-                // const path = new Path2D();
-                // path.moveTo(this.#edges[0].x, this.#edges[0].y);
-                // for (const point of this.#edges) {
-                //     path.lineTo(point.x, point.y);
-                // }
-                // this.#edges = null;
-                // this.ctx.lineWidth = 2;
-                // this.ctx.strokeStyle = 'white';
-                // this.ctx.stroke(path);
-                // const path = new Path2D();
-                // while (this.#edges.length % 2 !== 0) {
-                //     this.#edges.push(this.#edges[this.#edges.length % 2]);
-                // }
-                // while (this.#edges.length > 0) {
-                //     const cp_1 = this.#edges.shift();
-                //     const cp_2 = this.#edges.shift();
-                //     // const cp_3 = this.#edges.shift();
-                //     path.arcTo(cp_1.x, cp_1.y, cp_2.x, cp_2.y, 5);
-                //     // path.bezierCurveTo(cp_1.x, cp_1.y, cp_2.x, cp_2.y, cp_3.x, cp_3.y);
-                // }
-                // this.ctx.lineWidth = 2;
-                // this.ctx.strokeStyle = 'white';
-                // this.ctx.stroke(path);
-                // this.#edges = null;
-                this.#last_points = null;
-                this.ctx.restore();
-            }
-            this.#queued_render = false;
-        });
+                this.#queued_render = false;
+            });
+        } catch (err) {
+            console.log(err);
+        }
         requestAnimationFrame(() => {
-            this.#hidden_frame.style.zIndex = 2;
-            this.#current_frame.style.zIndex = 1;
+            this.#hidden_frame.style.zIndex = '2';
+            this.#current_frame.style.zIndex = '1';
             [this.#current_ctx, this.#hidden_ctx] = [
                 this.#hidden_ctx,
                 this.#current_ctx
@@ -585,8 +590,12 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                 value.y <= this.height
         );
         const edge = new Path2D();
-        if (this.#last_points !== null && this.#last_points.length > 1) {
-            const start = points.at(-1);
+        if (
+            this.#last_points !== null &&
+            this.#last_points.length > 1 &&
+            last_point_on_screen > 0 &&
+            last_points.length > last_point_on_screen
+        ) {
             const prev = last_points[last_point_on_screen - 1];
             const end = this.#last_points[this.#last_points.length - 1];
             const prev_end = this.#last_points[this.#last_points.length - 2];
@@ -594,7 +603,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                 last_points[last_point_on_screen].x,
                 last_points[last_point_on_screen].y
             );
-            edge.lineTo(end?.x, end?.y);
+            edge.lineTo(end.x, end.y);
             edge.lineTo((prev.x + prev_end.x) / 2, (prev.y + prev_end.y) / 2);
             edge.lineTo(
                 last_points[last_point_on_screen].x,

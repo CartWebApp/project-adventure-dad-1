@@ -124,7 +124,6 @@ class Renderer {
                     this.#mouse_y = event.clientY - display.offsetTop;
                 }
             });
-            this.#last_image_data = new ImageData(this.display.width, this.display.height);
         }
 
         #clear_display() {
@@ -153,13 +152,11 @@ class Renderer {
                 this.display.width,
                 this.display.height
             );
-            this.#last_image_data = this.display_ctx.getImageData(0, 0, this.display.width, this.display.height);
         }
 
         #start = 0;
         #last_frame = -Infinity;
-        /** @type {ImageData} */
-        #last_image_data;
+
         #queue_refresh() {
             if (this.#queued_refresh || this.#batching) {
                 return;
