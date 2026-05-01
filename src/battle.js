@@ -747,6 +747,7 @@ class Combat {
                             playerMelee(player, target, log);
                         }
                     }
+                    // Player action code goes here -------------------------------->
                 }
 
                 // enemies act

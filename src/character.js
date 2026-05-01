@@ -51,6 +51,7 @@ class Player {
         this.health_regen = 5;
         this.luck = 0;
         this.block_chance = 0;
+        // Whole number converts to precent (50 -> 50% or 0.5)
         this.damage_reduction = 0;
         this.combat_timer = 100;
         this.extra_lives = 0;
@@ -130,8 +131,7 @@ class Player {
 
                 // 'resistance to all damage types +10%'
                 if (s.includes('resistance to all damage types')) {
-                    const m = s.match(/\+(\d+)%/);
-                    if (m) this.damage_reduction += parseInt(m[1], 10);
+                    this.damage_reduction += 10
                     continue;
                 }
                 // All mana regen * 2 becomes health regen (Remove mana regen)

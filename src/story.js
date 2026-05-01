@@ -53,7 +53,7 @@ export class Step {
     /**
      * @param {Game} game
      */
-    async execute(game) {}
+    async execute(game) { }
     /**
      * @param {(typeof STATES)[keyof typeof STATES]} state
      */
@@ -96,7 +96,7 @@ class Branch extends Step {
      */
     with_branches(...branches) {
         this.branches = branches.map(branch =>
-            branch !== null ? branch : new Execute(() => {})
+            branch !== null ? branch : new Execute(() => { })
         );
         for (const branch of this.branches) {
             branch.parent = this;
@@ -179,20 +179,24 @@ class BattleEncounter extends Step {
 const AfterWin = new Execute(async game => {
     await dialog('You defeated your foes!');
     if (!game.player) return;
-    // small reward: restore some stamina/mana and give a bit of luck
-    game.player.stamina = Math.min(
-        game.player.max_stamina,
-        game.player.stamina + 10
-    );
-    game.player.mana = Math.min(game.player.max_mana, game.player.mana + 5);
-    game.player.luck = (game.player.luck || 0) + 1;
+    // small reward: restore stamina/mana
+    game.player.stamina = game.player.max_stamina;
+    game.player.mana = game.player.max_mana;
+
+    const difficulty = game.last_combat_result?.difficulty ?? DIFFICULTY.MEDIUM;
+
+    const rewardChance =
+        difficulty === DIFFICULTY.EASY
+            ? 0.3
+            : difficulty === DIFFICULTY.MEDIUM
+                ? 0.6
+                : 0.9;
 
     // Award money and an item based on difficulty
-    const difficulty = game.last_combat_result?.difficulty ?? DIFFICULTY.MEDIUM;
     let minMoney = 25,
         maxMoney = 100;
     let tier = 1; // 0=low,1=mid,2=high
-    switch(difficulty) {
+    switch (difficulty) {
         case DIFFICULTY.EASY: {
             minMoney = 25;
             maxMoney = 100;
@@ -215,55 +219,53 @@ const AfterWin = new Execute(async game => {
     const money = interpolate(minMoney, maxMoney, Math.random());
     game.player.money = (game.player.money || 0) + money;
 
-    // Select an item from the items array biased by value tiers
-    const sorted = items.toSorted((a, b) => (a.value || 0) - (b.value || 0));
-    const third = Math.max(1, Math.floor(sorted.length / 3));
-    let pool = [];
-    if (tier === 0) pool = sorted.slice(0, third);
-    else if (tier === 1) pool = sorted.slice(third, third * 2);
-    else pool = sorted.slice(third * 2);
-    if (pool.length === 0) pool = sorted;
-    const item = pool[Math.floor(Math.random() * pool.length)];
-    game.player.inventory = game.player.inventory || [];
-    game.player.inventory.push(item);
+    // Select an item from the items array biased by value tiers (chance scales with difficulty)
+    if (Math.random() < rewardChance) {
+        const sorted = items.toSorted((a, b) => (a.value || 0) - (b.value || 0));
+        const third = Math.max(1, Math.floor(sorted.length / 3));
+        let pool = [];
+        if (tier === 0) pool = sorted.slice(0, third);
+        else if (tier === 1) pool = sorted.slice(third, third * 2);
+        else pool = sorted.slice(third * 2);
+        if (pool.length === 0) pool = sorted;
+        const item = pool[Math.floor(Math.random() * pool.length)];
+        game.player.inventory = game.player.inventory || [];
+        game.player.inventory.push(item);
+    }
 
-    // Award a potion (always) chosen by difficulty-tier
-    const potionPool = potions || [];
-    let potionCandidates = potionPool;
-    if (difficulty === DIFFICULTY.EASY)
-        potionCandidates = potionPool.filter(
-            p => (p.costs?.common ?? p.value ?? 0) < 200
-        );
-    else if (difficulty === DIFFICULTY.MEDIUM)
-        potionCandidates = potionPool.filter(
-            p => (p.costs?.rare ?? p.value ?? 0) < 2000
-        );
-    else potionCandidates = potionPool;
-    if (potionCandidates.length > 0) {
-        const chosenPotion = JSON.parse(
-            JSON.stringify(
-                potionCandidates[
+    // Award a potion (always) chosen by difficulty-tier (chance scales with difficulty)
+    if (Math.random() < rewardChance) {
+        const potionPool = potions || [];
+        let potionCandidates = potionPool;
+        if (difficulty === DIFFICULTY.EASY)
+            potionCandidates = potionPool.filter(
+                p => (p.costs?.common ?? p.value ?? 0) < 200
+            );
+        else if (difficulty === DIFFICULTY.MEDIUM)
+            potionCandidates = potionPool.filter(
+                p => (p.costs?.rare ?? p.value ?? 0) < 2000
+            );
+        else potionCandidates = potionPool;
+        if (potionCandidates.length > 0) {
+            const chosenPotion = JSON.parse(
+                JSON.stringify(
+                    potionCandidates[
                     Math.floor(Math.random() * potionCandidates.length)
-                ]
-            )
-        );
-        game.player.inventory.push(chosenPotion);
+                    ]
+                )
+            );
+            game.player.inventory.push(chosenPotion);
+        }
     }
 
     // Possibly award armor/weapon (chance scales with difficulty)
-    const armorChance =
-        difficulty === DIFFICULTY.EASY
-            ? 0.3
-            : difficulty === DIFFICULTY.MEDIUM
-              ? 0.6
-              : 0.9;
-    if (Math.random() < armorChance) {
+    if (Math.random() < rewardChance) {
         const rarity =
             difficulty === DIFFICULTY.EASY
                 ? 'common'
                 : difficulty === DIFFICULTY.MEDIUM
-                  ? 'rare'
-                  : 'epic';
+                    ? 'rare'
+                    : 'epic';
         const armorPool = getArmorForRarity(rarity) || [];
         if (armorPool.length > 0) {
             const chosenArmor = JSON.parse(
@@ -280,16 +282,16 @@ const AfterWin = new Execute(async game => {
         difficulty === DIFFICULTY.EASY
             ? 0.2
             : difficulty === DIFFICULTY.MEDIUM
-              ? 0.5
-              : 0.8;
+                ? 0.5
+                : 0.8;
     if (Math.random() < spellChance && spells.length > 0) {
         // Prefer spells that have params or costs for the target rarity
         const targetRarity =
             difficulty === DIFFICULTY.EASY
                 ? 'common'
                 : difficulty === DIFFICULTY.MEDIUM
-                  ? 'rare'
-                  : 'epic';
+                    ? 'rare'
+                    : 'epic';
         const candidates = spells.filter(s => {
             return (
                 (s.params_by_rarity && s.params_by_rarity[targetRarity]) ||
@@ -307,7 +309,7 @@ const AfterWin = new Execute(async game => {
         game.player.spells.push(chosenSpell);
     }
 
-    await dialog(`You found ${item.name} and ${money} copper!`);
+    await dialog(`You got ${money} copper and other items!`);
 });
 
 const AfterLoss = new Execute(async game => {
@@ -357,7 +359,7 @@ class Battle extends Step {
         while (
             opponents.some(opponent => opponent.health > 0) ||
             game.player.health > 0
-        ) {}
+        ) { }
     }
 
     /**
@@ -396,7 +398,7 @@ class Input extends Step {
     /** @type {T | undefined} */
     value;
     /** @type {(value: T) => void} */
-    handler = () => {};
+    handler = () => { };
     max_length = Infinity;
     /**
      * @param {string} prompt
@@ -448,7 +450,7 @@ class Input extends Step {
 class Dialog extends Step {
     dialog;
     /** @type {(renderer: Renderer, x: number, y: number) => void} */
-    render_icon = () => {};
+    render_icon = () => { };
     per_letter_duration = 75;
     /**
      * @param {string} dialog
@@ -749,15 +751,15 @@ export const story = new Parallel(
                         const sun_x =
                             center_x +
                             (0.35 * renderer.width - center_x) *
-                                Math.cos(angle) -
+                            Math.cos(angle) -
                             (0.3 * renderer.height - center_y) *
-                                Math.sin(angle);
+                            Math.sin(angle);
                         const sun_y =
                             center_y +
                             (0.35 * renderer.width - center_x) *
-                                Math.sin(angle) +
+                            Math.sin(angle) +
                             (0.3 * renderer.height - center_y) *
-                                Math.cos(angle);
+                            Math.cos(angle);
                         if (
                             sun_x > 0 &&
                             sun_x < renderer.width &&
@@ -770,15 +772,15 @@ export const story = new Parallel(
                         const moon_x =
                             center_x +
                             (0.35 * renderer.width - center_x) *
-                                Math.cos(moon_angle) -
+                            Math.cos(moon_angle) -
                             (0.3 * renderer.height - center_y) *
-                                Math.sin(moon_angle);
+                            Math.sin(moon_angle);
                         const moon_y =
                             center_y +
                             (0.35 * renderer.width - center_x) *
-                                Math.sin(moon_angle) +
+                            Math.sin(moon_angle) +
                             (0.3 * renderer.height - center_y) *
-                                Math.cos(moon_angle);
+                            Math.cos(moon_angle);
                         if (
                             moon_x > 0 &&
                             moon_x < renderer.width &&
@@ -795,12 +797,12 @@ export const story = new Parallel(
                         );
                     },
                     () => {
-                        return new Promise(resolve => {});
+                        return new Promise(resolve => { });
                     }
                 ).with_batch(true)
             ),
             new Loop(async game => {
-                
+
                 try {
                     if (Math.random() < 0.01) {
                         await dialog('You sense danger nearby...');
