@@ -1,21 +1,5 @@
 import { BENCHMARKING } from './constants.js';
 
-/**
- * @param {ImageData} a
- * @param {ImageData} b
- */
-function is_imagedata_equal(a, b) {
-    const a_data = a.data;
-    const b_data = b.data;
-    const len = a_data.length;
-    for (let i = 0; i < len; i++) {
-        if (a_data[i] !== b_data[i]) {
-            return false;
-        }
-    }
-    return true;
-}
-
 class Renderer {
     /** @type {CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D} */
     ctx;
@@ -181,18 +165,8 @@ class Renderer {
             });
         }
 
-        // #equality_test = document.createElement('canvas');
-        // #equality_ctx = /** @type {CanvasRenderingContext2D} */ (this.#equality_test.getContext('2d'));
-
         #refresh() {
             this.#image = this.#pass(this.offscreen);
-            // this.#equality_test.width = this.display.width;
-            // this.#equality_test.height = this.display.height;
-            // this.#equality_ctx.clearRect(0, 0, this.width, this.height);
-            // if (is_imagedata_equal(this.#equality_ctx.getImageData(0, 0, this.display.width, this.display.height), this.#last_image_data)) {
-            //     this.#queued_refresh = false;
-            //     return;
-            // }
             this.#clear_display();
             this.#draw();
             this.#queued_refresh = false;

@@ -135,7 +135,9 @@ function processEffects(actor, log) {
             if (apply > 0) {
                 applyDamage(actor, apply);
                 actor._dot_acc -= apply;
-                log.push(`${actor.name || 'Player'} takes ${apply} ${e.name} damage.`);
+                log.push(
+                    `${actor.name || 'Player'} takes ${apply} ${e.name} damage.`
+                );
             }
         }
         // reduce duration (if not infinite)
@@ -289,7 +291,8 @@ function playerCast(player, enemy, enemies, spellName, log) {
 
         /** @param {string} key */
         const tryLookup = key =>
-            def.params_by_rarity?.[rarity]?.[key] ?? def.params_by_rarity?.common?.[key];
+            def.params_by_rarity?.[rarity]?.[key] ??
+            def.params_by_rarity?.common?.[key];
 
         // candidate keys: original, seconds->Ticks, minutes->Ticks, seconds->seconds (lower), ticks
         const candidates = [
@@ -311,10 +314,17 @@ function playerCast(player, enemy, enemies, spellName, log) {
         // If the value is already tick-based (key contains 'tick' or 'Ticks'), return as-is
         const keyLower = paramName.toLowerCase();
         if (typeof raw === 'number') {
-            if (keyLower.includes('ticks') || keyLower.includes('tick')) return raw;
-            if (keyLower.includes('seconds')) return Math.round(raw * TICKS_PER_SEC);
-            if (keyLower.includes('minutes')) return Math.round(raw * 60 * TICKS_PER_SEC);
-            if (keyLower.includes('damagepersecond') || keyLower.includes('dps')) return raw / TICKS_PER_SEC;
+            if (keyLower.includes('ticks') || keyLower.includes('tick'))
+                return raw;
+            if (keyLower.includes('seconds'))
+                return Math.round(raw * TICKS_PER_SEC);
+            if (keyLower.includes('minutes'))
+                return Math.round(raw * 60 * TICKS_PER_SEC);
+            if (
+                keyLower.includes('damagepersecond') ||
+                keyLower.includes('dps')
+            )
+                return raw / TICKS_PER_SEC;
         }
         return raw;
     };
@@ -354,8 +364,18 @@ function playerCast(player, enemy, enemies, spellName, log) {
             const dmg =
                 resolveParam(def, p, 'damage', 5) +
                 Math.floor(player.luck * 0.02 * 8);
-            const burnTicks = resolveParam(def, p, 'burnTicks', 4 * TICKS_PER_SEC);
-            const burnPerTick = resolveParam(def, p, 'damagePerTick', 2 / TICKS_PER_SEC);
+            const burnTicks = resolveParam(
+                def,
+                p,
+                'burnTicks',
+                4 * TICKS_PER_SEC
+            );
+            const burnPerTick = resolveParam(
+                def,
+                p,
+                'damagePerTick',
+                2 / TICKS_PER_SEC
+            );
             const dealt = hitSingle(enemy, dmg);
             applyEffect(enemy, COMBAT_EFFECTS.burning(burnTicks, burnPerTick));
             const burnSecsHuman = Math.round(burnTicks / TICKS_PER_SEC);
@@ -399,7 +419,12 @@ function playerCast(player, enemy, enemies, spellName, log) {
             if (!spendMana(cost)) return;
             const radius = resolveParam(def, p, 'radius', 10);
             const damagePerTick = resolveParam(def, p, 'damagePerTick', 15);
-            const durationTicks = resolveParam(def, p, 'durationTicks', 5 * TICKS_PER_SEC);
+            const durationTicks = resolveParam(
+                def,
+                p,
+                'durationTicks',
+                5 * TICKS_PER_SEC
+            );
             let total = 0;
             for (const e of aliveEnemies) {
                 // For simplicity assume all enemies are within radius
@@ -421,7 +446,12 @@ function playerCast(player, enemy, enemies, spellName, log) {
             const def = getSpellDef('earthquake');
             const cost = resolveManaCost(def, p) || 25;
             if (!spendMana(cost)) return;
-            const durationTicks = resolveParam(def, p, 'durationTicks', 1 * 60 * 60);
+            const durationTicks = resolveParam(
+                def,
+                p,
+                'durationTicks',
+                1 * 60 * 60
+            );
             const perTick = 15; // instant per-tick damage applied once here as well
             let total = 0;
             for (const e of aliveEnemies) {
@@ -431,7 +461,9 @@ function playerCast(player, enemy, enemies, spellName, log) {
                 applyEffect(e, COMBAT_EFFECTS.withering(durationTicks, 5, 1));
                 total += final;
             }
-            const durationMinsHuman = Math.round(durationTicks / (60 * TICKS_PER_SEC));
+            const durationMinsHuman = Math.round(
+                durationTicks / (60 * TICKS_PER_SEC)
+            );
             log.push(
                 `${spellName} shakes the ground for ${total} damage and applies Withering for ${durationMinsHuman} minutes.`
             );
@@ -441,7 +473,12 @@ function playerCast(player, enemy, enemies, spellName, log) {
             const def = getSpellDef('blessing of life');
             const cost = resolveManaCost(def, p) || 0;
             if (!spendMana(cost)) return;
-            const castTimeTicks = resolveParam(def, p, 'castTimeTicks', 90 * TICKS_PER_SEC);
+            const castTimeTicks = resolveParam(
+                def,
+                p,
+                'castTimeTicks',
+                90 * TICKS_PER_SEC
+            );
             // For now heal instantly but record cast time in log
             p.current_health = p.max_life;
             p.health = p.current_health;
@@ -495,13 +532,24 @@ function playerCast(player, enemy, enemies, spellName, log) {
             const cost = resolveManaCost(def, p) || 30;
             if (!spendMana(cost)) return;
             const effectPercent = resolveParam(def, p, 'effectPercent', 10);
-            const durationTicks = resolveParam(def, p, 'durationTicks', 30 * TICKS_PER_SEC);
+            const durationTicks = resolveParam(
+                def,
+                p,
+                'durationTicks',
+                30 * TICKS_PER_SEC
+            );
             // damage per tick scaled by effectPercent (simple mapping)
-            const dmgPerTick = resolveParam(def, p, 'damagePerTick', Math.max(1, Math.round(effectPercent / 10)));
+            const dmgPerTick = resolveParam(
+                def,
+                p,
+                'damagePerTick',
+                Math.max(1, Math.round(effectPercent / 10))
+            );
             applyEffect(enemy, COMBAT_EFFECTS.poison(dmgPerTick));
             // set duration on the effect instance
             if (enemy.effects && enemy.effects.length > 0) {
-                enemy.effects[enemy.effects.length - 1].remaining = durationTicks;
+                enemy.effects[enemy.effects.length - 1].remaining =
+                    durationTicks;
             }
             const durationSecsHuman = Math.round(durationTicks / TICKS_PER_SEC);
             log.push(
@@ -563,7 +611,7 @@ function playerCast(player, enemy, enemies, spellName, log) {
             );
         },
 
-        'default': () => {
+        default: () => {
             // fallback
             log.push('Spell has no implementation.');
         }
@@ -650,7 +698,6 @@ class Combat {
      */
     async start() {
         return new Promise(resolve => {
-
             /** @type {any} */
             const player = this.player;
             /** @type {any[]} */
@@ -659,7 +706,8 @@ class Combat {
             const log = [];
 
             // ensure runtime fields exist
-            player.current_health = player.current_health ?? player.health ?? player.max_life ?? 0;
+            player.current_health =
+                player.current_health ?? player.health ?? player.max_life ?? 0;
             player.effects = player.effects || [];
             for (const e of enemies) {
                 e.current_health = e.current_health ?? e.health ?? 0;
@@ -688,7 +736,13 @@ class Combat {
                         if (player.stamina >= 10) {
                             playerMelee(player, target, log);
                         } else if (player.mana >= 12) {
-                            playerCast(player, target, enemies, 'Magic Missile', log);
+                            playerCast(
+                                player,
+                                target,
+                                enemies,
+                                'Magic Missile',
+                                log
+                            );
                         } else {
                             playerMelee(player, target, log);
                         }
@@ -697,7 +751,10 @@ class Combat {
 
                 // enemies act
                 for (const e of aliveEnemies) {
-                    const speed = typeof e.attack_speed === 'number' ? e.attack_speed : 3.0;
+                    const speed =
+                        typeof e.attack_speed === 'number'
+                            ? e.attack_speed
+                            : 3.0;
                     const actChance = Math.min(1, 1 / Math.max(0.5, speed));
                     if (Math.random() < actChance) {
                         enemyAct(e, player, log);
@@ -705,11 +762,17 @@ class Combat {
                 }
 
                 // clamp player/enemy health to zero and update player.health for persistence
-                player.current_health = Math.max(0, Math.min(player.current_health, player.max_life));
+                player.current_health = Math.max(
+                    0,
+                    Math.min(player.current_health, player.max_life)
+                );
                 player.health = player.current_health;
 
                 for (const e of enemies) {
-                    e.current_health = Math.max(0, Math.min(e.current_health, e.health));
+                    e.current_health = Math.max(
+                        0,
+                        Math.min(e.current_health, e.health)
+                    );
                 }
             };
 
@@ -718,7 +781,11 @@ class Combat {
                 const anyEnemyAlive = enemies.some(e => e.current_health > 0);
                 const playerAlive = player.current_health > 0;
                 if (!playerAlive || !anyEnemyAlive) {
-                    log.push(playerAlive && !anyEnemyAlive ? 'You won the battle!' : 'You were defeated...');
+                    log.push(
+                        playerAlive && !anyEnemyAlive
+                            ? 'You won the battle!'
+                            : 'You were defeated...'
+                    );
                     // sync fields back to main
                     player.health = player.current_health;
                     resolve({ won: playerAlive && !anyEnemyAlive, log });
@@ -728,9 +795,14 @@ class Combat {
             };
 
             // If running in a browser, use requestAnimationFrame with a fixed timestep accumulator
-            const rAF = typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function';
+            const rAF =
+                typeof window !== 'undefined' &&
+                typeof window.requestAnimationFrame === 'function';
             if (rAF) {
-                let last = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+                let last =
+                    typeof performance !== 'undefined' && performance.now
+                        ? performance.now()
+                        : Date.now();
                 let acc = 0;
                 let rafId = 0;
                 /** @param {number} now */
@@ -742,7 +814,11 @@ class Combat {
                         acc -= fixedDt;
                     }
                     if (checkEnd()) {
-                        if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') window.cancelAnimationFrame(rafId);
+                        if (
+                            typeof window !== 'undefined' &&
+                            typeof window.cancelAnimationFrame === 'function'
+                        )
+                            window.cancelAnimationFrame(rafId);
                         return;
                     }
                     rafId = window.requestAnimationFrame(frame);
@@ -761,7 +837,11 @@ class Combat {
     }
 }
 
-class CombatBuilder extends BaseBuilder {
+class CombatBuilder
+    extends /** @type {typeof BaseBuilder<{ [K in keyof Combat as Combat[K] extends Function ? never : K]: Combat[K] }, Combat>} */ (
+        BaseBuilder
+    )
+{
     constructor() {
         super(
             data => new Combat(data),
@@ -770,9 +850,6 @@ class CombatBuilder extends BaseBuilder {
             'player',
             'tickIntervalMs'
         );
-    }
-    build() {
-        return new Combat(this.data);
     }
 }
 

@@ -1,4 +1,5 @@
 // @ts-check
+import { TIME_SLOWDOWN } from './constants.js';
 import { RaytracingRenderer } from './raytracing.js';
 import { interpolate, pixelator } from './utils.js';
 const { Game } = await import('./game.js').then(async res => {
@@ -28,7 +29,7 @@ const renderer = new RaytracingRenderer(
     canvas,
     display,
     renderer => {
-        const time = Math.sin(game.time / 60 + Math.PI / 5) / 2 + 0.5;
+        const time = Math.sin(game.time / TIME_SLOWDOWN) / 2 + 0.5;
         const r = interpolate(135, 0, time);
         const g = interpolate(206, 0, time);
         const b = interpolate(235, 0, time);

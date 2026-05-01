@@ -1,3 +1,4 @@
+import { DIFFICULTY } from './battle.js';
 import { Player } from './character.js';
 import { RaytracingRenderer } from './raytracing.js';
 import { Step, story } from './story.js';
@@ -47,9 +48,9 @@ export class Game {
     player;
     /**
      * Optional holder for the last combat result produced by `BattleEncounter`.
-     * @type {{ won?: boolean, details?: any } | undefined}
+     * @type {{ won?: boolean, details?: any; difficulty: (typeof DIFFICULTY)[keyof typeof DIFFICULTY] } | undefined}
      */
-    _lastCombatResult;
+    last_combat_result;
     /** @type {Step | null} */
     current_step = null;
     /** @type {RaytracingRenderer} */
@@ -68,6 +69,11 @@ export class Game {
             return;
         }
         this.current_step = Game.story;
+        /**
+         * Due to the way the `Step` class and its extenders work, 
+         * the chaining may return a step far away from the first step. 
+         * So, we have to climb back up the tree of steps to find the first one. 
+         */
         while (this.current_step?.prev || this.current_step?.parent) {
             if (this.current_step.prev !== null) {
                 this.current_step = this.current_step.prev;

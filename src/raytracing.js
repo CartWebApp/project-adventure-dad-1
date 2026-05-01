@@ -149,6 +149,12 @@ function delta(start, end) {
  * Due to differences in how the raytracing renderer works as opposed to other renderers, a `background` callback must be passed to add consistent backgrounds.
  */
 export class RaytracingRenderer extends Renderer.Offscreen {
+    /**
+     * For performance and UX, we use two canvases for the raytracing rendererer.
+     * While one is being painted to, we show the other. When the paint has completed,
+     * we swap the canvases. Otherwise, excessive flickering will occur.
+     * TODO this seems to work at least at the beginning, but seems to regress to a (albeit different) flickery state after a few minutes.
+     */
     #alt_frame = document.createElement('canvas');
     #alt_frame_ctx;
     #current_frame;
@@ -477,12 +483,6 @@ export class RaytracingRenderer extends Renderer.Offscreen {
             // console.log(parent_entity, lit_entity);
             if (!shading) {
                 path.lineTo(x, y);
-                if (
-                    this.#last_points !== null &&
-                    index < this.#last_points.length
-                ) {
-                    // console.log(delta(point, this.#last_points[index]));
-                }
                 if (
                     this.#last_points !== null &&
                     this.#last_lighting_level !== null &&

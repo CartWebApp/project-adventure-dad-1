@@ -1,6 +1,6 @@
 import { Player } from './character.js';
 import { Entity } from './combat.js';
-import { CHARACTER_CHOICES, STATES } from './constants.js';
+import { CHARACTER_CHOICES, STATES, TIME_SLOWDOWN } from './constants.js';
 import { Game } from './game.js';
 import { Ground, Knight, Moon, Sun, Tree } from './objects.js';
 import { Renderer } from './renderer.js';
@@ -17,7 +17,12 @@ import {
     potions,
     getArmorForRarity
 } from './obtainables.js';
+import { interpolate } from './utils.js';
 
+/**
+ * Base class for story building purposes.
+ * A `Step` is a node in a tree of linked lists representing the story.
+ */
 export class Step {
     /** @type {(typeof STATES)[keyof typeof STATES]} */
     state = STATES.TRAVEL;
@@ -69,6 +74,9 @@ export class Step {
     }
 }
 
+/**
+ * A `Step` to use when branching occurs.
+ */
 class Branch extends Step {
     determiner;
 
@@ -119,6 +127,9 @@ class Branch extends Step {
     }
 }
 
+/**
+ * A simple `Step` that runs the given function once.
+ */
 class Execute extends Step {
     executor;
     /**
@@ -137,24 +148,31 @@ class Execute extends Step {
     }
 }
 
-const BattleEncounter = new Execute(async game => {
-    // Choose difficulty dynamically if you want; here we use MEDIUM
-    const difficulty = DIFFICULTY.MEDIUM;
+class BattleEncounter extends Step {
+    difficulty;
+    /**
+     * @param {(typeof DIFFICULTY)[keyof typeof DIFFICULTY]} difficulty
+     */
+    constructor(difficulty) {
+        super();
+        this.difficulty = difficulty;
+    }
 
-    const enemies = pickEnemiesForDifficulty(difficulty);
+    /**
+     * @param {Game} game
+     */
+    async execute(game) {
+        const enemies = pickEnemiesForDifficulty(this.difficulty);
+        const combat = new CombatBuilder()
+            .with_difficulty(this.difficulty)
+            .with_player(game.player)
+            .with_enemies(enemies)
+            .build();
 
-    // Build and start combat
-    const combat = new CombatBuilder()
-        .with_difficulty(difficulty)
-        .with_player(game.player)
-        .with_enemies(enemies)
-        .build();
-
-    const result = await combat.start();
-
-    // store result on game for subsequent steps
-    game._lastCombatResult = Object.assign({}, result, { difficulty });
-});
+        const result = await combat.start();
+        game.last_combat_result = { ...result, difficulty: this.difficulty };
+    }
+}
 
 // Steps to run after a battle outcome. Keep them lightweight so they can
 // be reused by any Branch that wants to route based on combat results.
@@ -170,29 +188,35 @@ const AfterWin = new Execute(async game => {
     game.player.luck = (game.player.luck || 0) + 1;
 
     // Award money and an item based on difficulty
-    const difficulty = game._lastCombatResult?.difficulty || DIFFICULTY.MEDIUM;
+    const difficulty = game.last_combat_result?.difficulty ?? DIFFICULTY.MEDIUM;
     let minMoney = 25,
         maxMoney = 100;
     let tier = 1; // 0=low,1=mid,2=high
-    if (difficulty === DIFFICULTY.EASY) {
-        minMoney = 25;
-        maxMoney = 100;
-        tier = 0;
-    } else if (difficulty === DIFFICULTY.MEDIUM) {
-        minMoney = 200;
-        maxMoney = 600;
-        tier = 1;
-    } else if (difficulty === DIFFICULTY.HARD) {
-        minMoney = 1200;
-        maxMoney = 5000;
-        tier = 2;
+    switch(difficulty) {
+        case DIFFICULTY.EASY: {
+            minMoney = 25;
+            maxMoney = 100;
+            tier = 0;
+            break;
+        }
+        case DIFFICULTY.MEDIUM: {
+            minMoney = 200;
+            maxMoney = 600;
+            tier = 1;
+            break;
+        }
+        case DIFFICULTY.HARD: {
+            minMoney = 1200;
+            maxMoney = 5000;
+            tier = 2;
+            break;
+        }
     }
-    const money =
-        Math.floor(Math.random() * (maxMoney - minMoney + 1)) + minMoney;
+    const money = interpolate(minMoney, maxMoney, Math.random());
     game.player.money = (game.player.money || 0) + money;
 
     // Select an item from the items array biased by value tiers
-    const sorted = [...items].sort((a, b) => (a.value || 0) - (b.value || 0));
+    const sorted = items.toSorted((a, b) => (a.value || 0) - (b.value || 0));
     const third = Math.max(1, Math.floor(sorted.length / 3));
     let pool = [];
     if (tier === 0) pool = sorted.slice(0, third);
@@ -303,7 +327,7 @@ const BattleBranch = new Branch(async game => {
     // run the encounter
     await BattleEncounter.execute(game);
     // read the result
-    const won = !!game._lastCombatResult?.won;
+    const won = !!game.last_combat_result?.won;
     return won ? 0 : 1;
 }).with_branches(AfterWin, AfterLoss);
 
@@ -367,6 +391,7 @@ class Battle extends Step {
 class Input extends Step {
     prompt;
     /** @type {(input: string) => input is T} */
+    // @ts-expect-error
     validator = input => true;
     /** @type {T | undefined} */
     value;
@@ -386,6 +411,15 @@ class Input extends Step {
      */
     with_validator(validator) {
         this.validator = validator;
+        return this;
+    }
+
+    /**
+     * @param {RegExp} pattern
+     */
+    with_matcher(pattern) {
+        // @ts-expect-error
+        this.validator = input => pattern.test(input);
         return this;
     }
 
@@ -453,9 +487,13 @@ class Dialog extends Step {
     }
 }
 
+/**
+ * Executes a group of `Step`s in parallel. 
+ */
 class Parallel extends Step {
     /** @type {Step[]} */
     steps = [];
+
     /**
      * @param {Step[]} steps
      */
@@ -463,6 +501,7 @@ class Parallel extends Step {
         super();
         this.steps = steps;
     }
+
     /**
      * @param {Game} game
      */
@@ -473,6 +512,7 @@ class Parallel extends Step {
 
 class Delayed extends Step {
     delay;
+
     /**
      * @param {number} delay
      */
@@ -480,6 +520,7 @@ class Delayed extends Step {
         super();
         this.delay = delay;
     }
+
     async execute() {
         await new Promise(resolve => setTimeout(resolve, this.delay));
     }
@@ -614,15 +655,13 @@ export const story = new Parallel(
     new Input('Choose a name.')
         .with_validator(
             // @ts-expect-error
-            /** @type {string} */ value =>
+            (/** @type {string} */ value) =>
                 typeof value === 'string' && value.length > 0
         )
         .with_max_length(15)
-        .handle(
-            /** @type {string} */ value => {
-                localStorage.name = value;
-            }
-        ),
+        .handle((/** @type {string} */ value) => {
+            localStorage.name = value;
+        }),
     new Execute(({ renderer }) => {
         const gradient = renderer.ctx.createLinearGradient(
             0,
@@ -693,39 +732,67 @@ export const story = new Parallel(
         )
     )
     .then(
+        new Execute(() => {
+            clear();
+        })
+    )
+    .then(
         new Parallel(
             new Parallel(
                 new Render(
                     async ({ renderer, time }) => {
-                        // renderer.batch(() => {
-                            clear();
-                            renderer.clear();
-                            renderer.entity(new Ground(), 0, 0);
-                            const center_x = renderer.width * 0.6;
-                            const center_y = renderer.height * 0.6;
-                            const angle = (time / 60) + Math.PI;
-                            const sun_x = center_x + (0.35 * renderer.width - center_x) * Math.cos(angle) - (0.15 * renderer.height - center_y) * Math.sin(angle);
-                            const sun_y = center_y + (0.35 * renderer.width - center_x) * Math.sin(angle) + (0.15 * renderer.height - center_y) * Math.cos(angle);
-                            if (sun_x > 0 && sun_x < renderer.width && sun_y > 0 && sun_y < renderer.height) {
-                                renderer.entity(
-                                    new Sun(),
-                                    sun_x,
-                                    sun_y
-                                );
-                            }
-                            const moon_angle = (time / 60);
-                            const moon_x = center_x + (0.35 * renderer.width - center_x) * Math.cos(moon_angle) - (0.15 * renderer.height - center_y) * Math.sin(moon_angle);
-                            const moon_y = center_y + (0.35 * renderer.width - center_x) * Math.sin(moon_angle) + (0.15 * renderer.height - center_y) * Math.cos(moon_angle);
-                            if (moon_x > 0 && moon_x < renderer.width && moon_y > 0 && moon_y < renderer.height) {
-                                renderer.entity(new Moon(), moon_x, moon_y);
-                            }
-                            renderer.entity(
-                                new Tree(),
-                                renderer.width * 0.9,
-                                0
-                            );
-                            renderer.entity(Knight.get_instance(), renderer.width * 0.75, renderer.height * 0.5);
-                        // });
+                        renderer.clear();
+                        renderer.entity(new Ground(), 0, 0);
+                        const center_x = renderer.width * 0.6;
+                        const center_y = renderer.height * 0.6;
+                        const angle = time / 60 + Math.PI;
+                        const sun_x =
+                            center_x +
+                            (0.35 * renderer.width - center_x) *
+                                Math.cos(angle) -
+                            (0.3 * renderer.height - center_y) *
+                                Math.sin(angle);
+                        const sun_y =
+                            center_y +
+                            (0.35 * renderer.width - center_x) *
+                                Math.sin(angle) +
+                            (0.3 * renderer.height - center_y) *
+                                Math.cos(angle);
+                        if (
+                            sun_x > 0 &&
+                            sun_x < renderer.width &&
+                            sun_y > 0 &&
+                            sun_y < renderer.height
+                        ) {
+                            renderer.entity(new Sun(), sun_x, sun_y);
+                        }
+                        const moon_angle = time / TIME_SLOWDOWN;
+                        const moon_x =
+                            center_x +
+                            (0.35 * renderer.width - center_x) *
+                                Math.cos(moon_angle) -
+                            (0.3 * renderer.height - center_y) *
+                                Math.sin(moon_angle);
+                        const moon_y =
+                            center_y +
+                            (0.35 * renderer.width - center_x) *
+                                Math.sin(moon_angle) +
+                            (0.3 * renderer.height - center_y) *
+                                Math.cos(moon_angle);
+                        if (
+                            moon_x > 0 &&
+                            moon_x < renderer.width &&
+                            moon_y > 0 &&
+                            moon_y < renderer.height
+                        ) {
+                            renderer.entity(new Moon(), moon_x, moon_y);
+                        }
+                        renderer.entity(new Tree(), renderer.width * 0.9, 0);
+                        renderer.entity(
+                            Knight.get_instance(),
+                            renderer.width * 0.75,
+                            renderer.height * 0.5
+                        );
                     },
                     () => {
                         return new Promise(resolve => {});
@@ -733,14 +800,12 @@ export const story = new Parallel(
                 ).with_batch(true)
             ),
             new Loop(async game => {
-                game.time++;
-                game.renderer.refresh();
-
+                
                 try {
                     if (Math.random() < 0.01) {
                         await dialog('You sense danger nearby...');
                         await BattleEncounter.execute(game);
-                        const won = !!game._lastCombatResult?.won;
+                        const won = !!game.last_combat_result?.won;
                         if (won) await AfterWin.execute(game);
                         else await AfterLoss.execute(game);
                     }
@@ -748,6 +813,13 @@ export const story = new Parallel(
                     // don't let a battle break the main loop
                     console.error('Battle error', e);
                 }
+
+            }),
+            // This loop is the way that time works
+            // DO NOT PUT ANYTHING ELSE HERE, YOU WILL LITERALLY STOP TIME ITSELF
+            new Loop(async game => {
+                game.time++;
+                game.renderer.refresh();
 
                 await new Promise(resolve => setTimeout(resolve, 100));
             })

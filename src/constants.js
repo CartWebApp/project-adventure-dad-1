@@ -7,6 +7,7 @@ export const TREE_WIDTH = 100;
 export const GRASS_COLOR = '#295c1b';
 export const DARKER_GRASS_COLOR = '#152c0a'
 export const BENCHMARKING = false;
+export const TIME_SLOWDOWN = 120;
 export const STATES = /** @type {const} */ ({
     TRAVEL: 1,
     DIALOGUE: 2,

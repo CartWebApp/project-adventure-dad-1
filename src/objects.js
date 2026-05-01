@@ -183,7 +183,7 @@ const canvas = document.createElement('canvas');
 const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
 
 /**
- * @param {InstanceType<globalThis['Image']>} image
+ * @param {InstanceType<(typeof globalThis)['Image']>} image
  */
 function get_outline(image) {
     canvas.width = image.width;
@@ -233,7 +233,7 @@ function get_outline(image) {
 }
 
 export class Image extends Entity {
-    /** @type {Map<string, { image: InstanceType<globalThis['Image']>; outline: Array<{ x: number; y: number }> }>} */
+    /** @type {Map<string, { image: InstanceType<(typeof globalThis)['Image']>; outline: Array<{ x: number; y: number }> }>} */
     static cache = new Map();
     /** @type {Array<{ x: number; y: number }>} */
     outline = [];
@@ -246,7 +246,7 @@ export class Image extends Entity {
         super();
         if (Image.cache.has(image)) {
             ({ image: this.image, outline: this.outline } =
-                /** @type {{ image: InstanceType<globalThis['Image']>; outline: Array<{ x: number; y: number }> }} */ (
+                /** @type {{ image: InstanceType<(typeof globalThis)['Image']>; outline: Array<{ x: number; y: number }> }} */ (
                     Image.cache.get(image)
                 ));
             return;

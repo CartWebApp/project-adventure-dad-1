@@ -61,15 +61,20 @@ const specialAttributes = {
     ]
 };
 
-const ATTRIBUTES_BY_RARITY = {
+const ATTRIBUTES_BY_RARITY = /** @type {const} */ ({
     common: commonAttributes,
     rare: rareAttributes,
     epic: epicAttributes,
     legendary: legendaryAttributes
-};
-const RARITY_ORDER = ['common', 'rare', 'epic', 'legendary'];
+});
+const RARITY_ORDER = /** @type {const} */ (['common', 'rare', 'epic', 'legendary']);
 const WEIGHT_BY_RARITY = { common: 1, rare: 2, epic: 4, legendary: 8 };
 
+/**
+ * @template {(typeof RARITY_ORDER[number])} const T
+ * @param {T} rarity
+ * @returns {any[]}
+ */
 function getAttributeKeys(rarity) {
     const pool = ATTRIBUTES_BY_RARITY[rarity];
     if (!pool) return [];
@@ -95,6 +100,9 @@ function rarityForAttribute(attr) {
     return 'common';
 }
 
+/**
+ * @param {number} max
+ */
 function randInt(max) {
     return Math.floor(Math.random() * max);
 }
@@ -776,7 +784,10 @@ const spells = [
         .with_cast('battle')
         .with_effect({ type: 'lightningStorm' })
         .with_params_by_rarity({
-            rare: { targets: 'enemies and/or the player', durationTicks: 2 * 60 * 60 },
+            rare: {
+                targets: 'enemies and/or the player',
+                durationTicks: 2 * 60 * 60
+            },
             epic: { targets: 'enemies', durationTicks: 4 * 60 * 60 },
             legendary: { targets: 'enemies', durationTicks: 8 * 60 * 60 }
         })
@@ -786,7 +797,7 @@ const spells = [
         .with_name('Godlike')
         .with_cast('battle')
         .with_effect({ type: 'omniBuff' })
-    .with_params_by_rarity({ legendary: { durationTicks: 20 * 60 } })
+        .with_params_by_rarity({ legendary: { durationTicks: 20 * 60 } })
         .with_mana_cost_by_rarity({ legendary: 80 })
         .build(),
     new SpellBuilder()
