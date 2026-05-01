@@ -8,6 +8,7 @@ import {
 import { spells as SPELL_DEFINITIONS } from './obtainables.js';
 import { Player } from './character.js';
 import { TICKS_PER_SEC } from './combat.js';
+import { castSpell as correctSpellCast } from './spells.js';
 
 /** @type {{EASY:'easy', MEDIUM:'medium', HARD:'hard'}} */
 const DIFFICULTY = {
@@ -860,5 +861,5 @@ export {
     DIFFICULTY,
     pickEnemiesForDifficulty,
     playerCast,
-    playerMelee
+    playerMelee,
 };
