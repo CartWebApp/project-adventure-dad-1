@@ -1,5 +1,6 @@
 // @ts-check
-import { CHARACTER_CHOICES } from './constants.js';
+import { CHARACTER_CHOICES, ORIENTATIONS } from './constants.js';
+import { Image } from './objects.js';
 import { Spell } from './obtainables.js';
 export const damageReduction = 0;
 export const combatTimer = 100;
@@ -31,6 +32,9 @@ class Player {
     equipped;
     /** @type {(typeof CHARACTER_CHOICES)[keyof typeof CHARACTER_CHOICES]} */
     character;
+    x = 500;
+    /** @type {(typeof ORIENTATIONS)[keyof typeof ORIENTATIONS]} */
+    direction = ORIENTATIONS.EAST;
 
     /**
      * @param {string} name
@@ -77,8 +81,25 @@ class Player {
     }
 
     toJSON() {
-        const { equip, applyAttributes, ...props } = this;
+        const { equip, applyAttributes, get_entity, ...props } = this;
         return props;
+    }
+
+    /**
+     * @param {(typeof ORIENTATIONS)[keyof typeof ORIENTATIONS]} orientation
+     * @param {number} scale
+     */
+    get_entity(orientation, scale) {
+        return new Image(
+            `../assets/${
+                this.character === CHARACTER_CHOICES.BEGGAR
+                    ? 'beggar'
+                    : this.character === CHARACTER_CHOICES.SLAVE
+                    ? 'slave'
+                    : 'knight_commander'
+            }/${orientation}.png`,
+            { scale }
+        );
     }
 
     /**
@@ -131,7 +152,7 @@ class Player {
 
                 // 'resistance to all damage types +10%'
                 if (s.includes('resistance to all damage types')) {
-                    this.damage_reduction += 10
+                    this.damage_reduction += 10;
                     continue;
                 }
                 // All mana regen * 2 becomes health regen (Remove mana regen)
