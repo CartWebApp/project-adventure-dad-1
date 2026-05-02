@@ -232,7 +232,7 @@ export class Entity {
     health = 0;
 }
 
-class Enemy extends Entity {
+export class Enemy extends Entity {
     name;
     health;
     health_regen;
@@ -339,7 +339,6 @@ class EnemyBuilder
         if (typeof attackSpeedVal === 'number') {
             data.attack_speed = attackSpeedVal;
         }
-        console.log(data);
         return new Enemy(data);
     }
     constructor() {
@@ -488,7 +487,7 @@ const enemies = [
         .build(),
 
     new EnemyBuilder()
-        .with_name('Plant monster')
+        .with_name('Plant Monster')
         .with_description('Living vegetation that traps prey')
         .with_health_range([81, 140])
         .with_attack_speed_range([3.5, 5])

@@ -179,6 +179,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         this.#alt_frame.width = this.width;
         this.#alt_frame.height = this.height;
         this.#alt_frame.style.zIndex = '1';
+        this.#current_frame.style.zIndex = '2';
         this.#alt_frame.className = 'raytraced';
         this.#alt_frame_ctx = /** @type {CanvasRenderingContext2D} */ (
             this.#alt_frame.getContext('2d')
@@ -243,10 +244,14 @@ export class RaytracingRenderer extends Renderer.Offscreen {
     }
 
     async #render() {
-        const entities = [...this.#entities];
+        const entities = [...this.#entities].toSorted(
+            (a, b) => a.entity.layer - b.entity.layer
+        );
         this.#entities.length = 0;
-        this.#hidden_frame.style.zIndex = '2';
-        this.#current_frame.style.zIndex = '1';
+        [this.#hidden_frame.style.zIndex, this.#current_frame.style.zIndex] = [
+            this.#current_frame.style.zIndex,
+            this.#hidden_frame.style.zIndex
+        ];
         [this.#current_ctx, this.#hidden_ctx] = [
             this.#hidden_ctx,
             this.#current_ctx
@@ -323,8 +328,13 @@ export class RaytracingRenderer extends Renderer.Offscreen {
             console.log(err);
         }
         requestAnimationFrame(() => {
-            this.#hidden_frame.style.zIndex = '2';
-            this.#current_frame.style.zIndex = '1';
+            [
+                this.#hidden_frame.style.zIndex,
+                this.#current_frame.style.zIndex
+            ] = [
+                this.#current_frame.style.zIndex,
+                this.#hidden_frame.style.zIndex
+            ];
             [this.#current_ctx, this.#hidden_ctx] = [
                 this.#hidden_ctx,
                 this.#current_ctx

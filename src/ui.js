@@ -1,5 +1,6 @@
+import { VERY_LOW_HEALTH } from './constants.js';
 import { Renderer } from './renderer.js';
-import { pixelator } from './utils.js';
+import { interpolate, InterpolatingDoubleTreeMap, pixelator } from './utils.js';
 
 const ui_canvas = /** @type {HTMLCanvasElement} */ (
     document.querySelector('canvas.ui')
@@ -36,7 +37,7 @@ function join(...fns) {
 const renderer = new Renderer.Offscreen(
     ui_canvas,
     display,
-    join(cursor, pixelator(1))
+    canvas => (render_status_bar(), canvas)
 );
 
 renderer.ctx.fillStyle = 'white';
@@ -53,7 +54,7 @@ display.addEventListener('click', () => {
 //         await new Promise(resolve => setTimeout(resolve, 50));
 //     }
 // }
-
+let render_status_bar = () => {};
 function cursor() {
     renderer.ctx.save();
     renderer.ctx.fillStyle = 'white';
@@ -79,6 +80,7 @@ function cursor() {
         }
     );
     renderer.ctx.restore();
+    render_status_bar();
 }
 
 let locked = false;
@@ -133,6 +135,7 @@ export function select(text, choices, render_icon = () => {}) {
         if (e.key === 'Enter') {
             resolve(choices[current_choice]);
             resolved = true;
+            locked = false;
         } else if (e.key === 'ArrowUp') {
             current_choice--;
             if (current_choice < 0) {
@@ -147,6 +150,8 @@ export function select(text, choices, render_icon = () => {}) {
     });
     let init = true;
     let tick = 0;
+    const lines = split_lines(text);
+    const height = Math.max(renderer.height * 0.2, lines.length * 22 + choices.length * 22 + 88);
     async function render() {
         renderer.ctx.fillStyle = 'white';
         renderer.ctx.font = '22px monospace, Noto Color Emoji';
@@ -157,9 +162,9 @@ export function select(text, choices, render_icon = () => {}) {
             renderer.ctx.fillStyle = 'black';
             renderer.ctx.roundRect(
                 renderer.width * 0.4,
-                renderer.height * 0.6,
+                renderer.height * 0.6 - (height - renderer.height * 0.2),
                 renderer.width * 0.5,
-                renderer.height * 0.2,
+                height,
                 15
             );
             renderer.ctx.fill();
@@ -169,13 +174,12 @@ export function select(text, choices, render_icon = () => {}) {
             render_icon(
                 renderer,
                 renderer.width * 0.415,
-                renderer.height * 0.7
+                renderer.height * 0.7 - (height - renderer.height * 0.2)
             );
             renderer.ctx.restore();
 
             renderer.ctx.fillStyle = 'white';
-            let y = renderer.height * 0.65;
-            const lines = split_lines(text);
+            let y = renderer.height * 0.65 - (height - renderer.height * 0.2);
             if (init) {
                 const rendered = [''];
                 let current_line = 0;
@@ -213,11 +217,12 @@ export function select(text, choices, render_icon = () => {}) {
                     y += 22;
                 }
             }
-            const offset = Math.max(
-                ...choices.map(
-                    choice => renderer.ctx.measureText(choice).width / 2
-                )
-            );
+            const offset = 15;
+            // const offset = Math.max(
+            //     ...choices.map(
+            //         choice => renderer.ctx.measureText(choice).width / 2
+            //     )
+            // );
             for (let i = 0; i < choices.length; i++) {
                 const level = (y += 22);
                 if (i === current_choice && tick++ % 28 < 14) {
@@ -245,7 +250,6 @@ export function select(text, choices, render_icon = () => {}) {
             }
         });
         if (resolved) {
-            locked = false;
             return;
         }
         return requestAnimationFrame(render);
@@ -299,6 +303,7 @@ export async function dialog(
         throw new Error('Race condition');
     }
     locked = true;
+    const { promise, resolve } = Promise.withResolvers();
     await renderer.batch_async(async () => {
         renderer.clear();
         renderer.ctx.strokeStyle = 'white';
@@ -347,7 +352,15 @@ export async function dialog(
             );
         }
     });
+    function handler(e) {
+        if (e.key === 'Enter') {
+            resolve();
+            removeEventListener('keydown', handler);
+        }
+    }
+    addEventListener('keydown', handler);
     locked = false;
+    return promise;
 }
 
 /**
@@ -518,6 +531,78 @@ export async function input(
     }
     await frame();
     return promise;
+}
+
+/**
+ * Declares the colors for health.
+ * Since I'm too lazy to figure out the math to
+ * calculate the color based on the health value,
+ * we just use linear interpolation :)
+ * 
+ */
+const health_color_r = new InterpolatingDoubleTreeMap();
+const health_color_g = new InterpolatingDoubleTreeMap();
+const health_color_b = new InterpolatingDoubleTreeMap();
+health_color_r.set(0.25, 0xff);
+health_color_g.set(0.25, 0x33);
+health_color_b.set(0.25, 0x33);
+health_color_r.set(0.5, 0xcc);
+health_color_g.set(0.5, 0x77);
+health_color_b.set(0.5, 0x22);
+health_color_r.set(0.75, 0xff);
+health_color_g.set(0.75, 0xff);
+health_color_b.set(0.75, 0x33);
+health_color_r.set(1, 0x55);
+health_color_g.set(1, 0xff);
+health_color_b.set(1, 0x55);
+let last_health = 1;
+/**
+ * @param {number} amount
+ */
+export function health(amount) {
+    // console.log(amount);
+    const length = amount * renderer.width * 0.2;
+    renderer.ctx.save();
+    // renderer.batch(() => {
+        renderer.ctx.lineCap = 'round';
+        renderer.ctx.lineJoin = 'round';
+        renderer.ctx.lineWidth = 25;
+        renderer.ctx.strokeStyle = '#260048';
+        renderer.line(
+            {
+                x: renderer.width * 0.35,
+                y: renderer.height * 0.05
+            },
+            {
+                x: renderer.width * 0.55,
+                y: renderer.height * 0.05
+            }
+        );
+        renderer.ctx.lineCap = 'round';
+        renderer.ctx.lineJoin = 'round';
+        renderer.ctx.lineWidth = 20;
+        const r = health_color_r.get(amount) | 0;
+        const g = health_color_g.get(amount) | 0;
+        const b = health_color_b.get(amount) | 0;
+        // console.log({ r, g, b });
+        renderer.ctx.strokeStyle = `#${r.toString(16)}${g.toString(16)}${b.toString(16)}`;
+        // console.log(renderer.ctx.strokeStyle);
+        renderer.line(
+            {
+                x: renderer.width * 0.35,
+                y: renderer.height * 0.05
+            },
+            {
+                x: renderer.width * 0.35 + length,
+                y: renderer.height * 0.05
+            }
+        );
+    // });
+    renderer.ctx.restore();
+}
+
+export function status_bar(fn) {
+    render_status_bar = fn;
 }
 
 export function clear() {

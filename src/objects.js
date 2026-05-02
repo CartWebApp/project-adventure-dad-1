@@ -50,6 +50,43 @@ export class Ground extends Entity {
     }
 }
 
+export class BattleGround extends Entity {
+    layer = 1;
+    outline = [
+        {
+            x: 0,
+            y: Game.current.renderer.height * 0.45
+        },
+        {
+            x: Game.current.renderer.width,
+            y: Game.current.renderer.height * 0.45
+        },
+        {
+            x: Game.current.renderer.width,
+            y: Game.current.renderer.height
+        },
+        {
+            x: 0,
+            y: Game.current.renderer.height
+        }
+    ];
+    /**
+     * @param {Renderer} renderer
+     */
+    render(renderer) {
+        const gradient = renderer.ctx.createLinearGradient(
+            0,
+            renderer.height * 0.45,
+            0,
+            renderer.height
+        );
+        gradient.addColorStop(0, GRASS_COLOR);
+        gradient.addColorStop(1, DARKER_GRASS_COLOR);
+        renderer.ctx.fillStyle = gradient;
+        renderer.polygon(...this.outline);
+    }
+}
+
 export class Moon extends Entity {
     outline = circle(40, 10);
     lighting = {
@@ -233,6 +270,7 @@ function get_outline(image) {
 }
 
 export class Image extends Entity {
+    layer = 4;
     /** @type {Map<string, { image: InstanceType<(typeof globalThis)['Image']>; outline: Map<number, Array<{ x: number; y: number }>> }>} */
     static cache = new Map();
     /** @type {Array<{ x: number; y: number }>} */

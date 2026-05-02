@@ -706,6 +706,7 @@ const weapons = [
         .build()
 ];
 
+/** @type {Spell[]} */
 const spells = [
     new SpellBuilder()
         .with_name('Mana Bolt')

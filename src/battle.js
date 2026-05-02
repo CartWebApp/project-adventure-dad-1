@@ -3,7 +3,9 @@
 import {
     BaseBuilder,
     enemies as ENEMY_POOL,
-    effects as COMBAT_EFFECTS
+    effects as COMBAT_EFFECTS,
+    Entity,
+    Enemy
 } from './combat.js';
 import { spells as SPELL_DEFINITIONS } from './obtainables.js';
 import { Player } from './character.js';
@@ -13,6 +15,8 @@ import { dialog, input, select } from './ui.js';
 import { Game } from './game.js';
 import { ORIENTATIONS } from './constants.js';
 import { SPELLS } from './spells.js';
+import { sleep } from './utils.js';
+import { BattleGround } from './objects.js';
 
 /** @type {{EASY:'easy', MEDIUM:'medium', HARD:'hard'}} */
 const DIFFICULTY = {
@@ -27,13 +31,13 @@ const DIFFICULTY = {
 function cloneEnemy(enemy) {
     return Object.assign(
         Object.create(Object.getPrototypeOf(enemy)),
-        JSON.parse(JSON.stringify(enemy))
+        structuredClone(enemy)
     );
 }
 
 /**
  * @param {'easy'|'medium'|'hard'} difficulty
- * @returns {Array<any>}
+ * @returns {Array<Enemy>}
  */
 function pickEnemiesForDifficulty(difficulty) {
     // categorize pool by health tiers (small/medium/large)
@@ -66,7 +70,7 @@ function pickEnemiesForDifficulty(difficulty) {
     }
     // ensure each enemy has runtime fields
     return out.map(e => {
-        e.current_health = e.health;
+        e.health = e.health;
         e.effects = []; // active
         e._tickCounter = 0;
         return e;
@@ -75,8 +79,8 @@ function pickEnemiesForDifficulty(difficulty) {
 
 /**
  * Damage calculation
- * @param {any} _attacker
- * @param {{current_health:number, damage_reduction?:number, block_chance?:number}} defender
+ * @param {Player | Enemy} _attacker
+ * @param {{health:number, damage_reduction?:number, block_chance?:number}} defender
  * @param {number} baseDamage
  */
 function calculateDamage(_attacker, defender, baseDamage) {
@@ -96,21 +100,21 @@ function calculateDamage(_attacker, defender, baseDamage) {
 }
 
 /**
- * @param {{current_health:number, max_life?:number, extra_lives?:number}} target
+ * @param {{health:number, max_life?:number, extra_lives?:number}} target
  * @param {number} dmg
  */
 function applyDamage(target, dmg) {
     if (dmg <= 0) return;
-    target.current_health = Math.max(0, target.current_health - dmg);
+    target.health = Math.max(0, target.health - dmg);
 }
 
 /**
- * @param {any} target
- * @param {any} effect
+ * @param {Player | Enemy} target
+ * @param {Player | Enemy} effect
  */
 function applyEffect(target, effect) {
     // copy effect with runtime fields
-    const e = Object.assign({}, effect);
+    const { ...e } = effect;
     e.remaining =
         effect.duration === Infinity ? Infinity : Math.max(0, effect.duration);
     target.effects = target.effects || [];
@@ -119,7 +123,7 @@ function applyEffect(target, effect) {
 
 /**
  * Process active effects for one tick (1 second)
- * @param {any} actor
+ * @param {Player | Enemy} actor
  */
 async function processEffects(actor) {
     if (!actor.effects || actor.effects.length === 0) return;
@@ -137,11 +141,11 @@ async function processEffects(actor) {
             actor._dot_acc += perTick;
             const apply = Math.floor(actor._dot_acc);
             if (apply > 0) {
-                applyDamage(actor, apply);
-                actor._dot_acc -= apply;
                 await dialog(
                     `${actor.name || 'Player'} takes ${apply} ${e.name} damage.`
                 );
+                applyDamage(actor, apply);
+                actor._dot_acc -= apply;
             }
         }
         // reduce duration (if not infinite)
@@ -157,12 +161,12 @@ async function processEffects(actor) {
 
 /**
  * Simple enemy AI
- * @param {any} enemy
- * @param {any} player
+ * @param {Enemy} enemy
+ * @param {Player} player
  */
 async function enemyAct(enemy, player) {
     // skip dead
-    if (enemy.current_health <= 0) return;
+    if (enemy.health <= 0) return;
 
     // choose attack by weight
     const r = Math.random();
@@ -173,23 +177,23 @@ async function enemyAct(enemy, player) {
     // parse simple attack descriptors
     const name = String(chosen || '').toLowerCase();
     if (name.includes('poison')) {
-        applyEffect(player, COMBAT_EFFECTS.poison(1));
         await dialog(`${enemy.name} uses ${chosen} — applied Poison.`);
+        applyEffect(player, COMBAT_EFFECTS.poison(1));
     } else if (name.includes('burn')) {
-        applyEffect(player, COMBAT_EFFECTS.burning(5, 2));
         await dialog(`${enemy.name} uses ${chosen} — applied Burning.`);
+        applyEffect(player, COMBAT_EFFECTS.burning(5, 2));
     } else if (name.includes('petrif') || name.includes('petrified')) {
-        applyEffect(player, COMBAT_EFFECTS.petrified(3));
         await dialog(`${enemy.name} uses ${chosen} — applied Petrified.`);
+        applyEffect(player, COMBAT_EFFECTS.petrified(3));
     } else if (name.includes('stun') || name.includes('shocked')) {
-        applyEffect(player, COMBAT_EFFECTS.shocked(2));
         await dialog(`${enemy.name} uses ${chosen} — applied Shocked.`);
+        applyEffect(player, COMBAT_EFFECTS.shocked(2));
     } else {
         // default: basic damage
         const base = Math.max(3, Math.round(enemy.health * 0.03));
         const { final } = calculateDamage(enemy, player, base);
-        applyDamage(player, final);
         await dialog(`${enemy.name} hits for ${final} damage.`);
+        applyDamage(player, final);
     }
 }
 
@@ -201,8 +205,8 @@ async function enemyAct(enemy, player) {
 
 /**
  * Player melee attack
- * @param {any} player
- * @param {any} enemy
+ * @param {Player} player
+ * @param {Enemy} enemy
  */
 async function playerMelee(player, enemy) {
     // Determine stamina cost from equipped weapon (by rarity) or default
@@ -243,8 +247,8 @@ async function playerMelee(player, enemy) {
 /**
  * Player cast spell (basic)
  * @param {Player} player
- * @param {any} enemy - primary target (may be null for AoE spells)
- * @param {Array<any>} enemies - full enemies array for AoE spells
+ * @param {Enemy | null} enemy - primary target (may be null for AoE spells)
+ * @param {Array<Enemy>} enemies - full enemies array for AoE spells
  * @param {string} spellName
  */
 async function playerCast(player, enemy, enemies, spellName) {
@@ -331,7 +335,7 @@ async function playerCast(player, enemy, enemies, spellName) {
     };
 
     // helpers
-    const aliveEnemies = (enemies || []).filter(e => e.current_health > 0);
+    const aliveEnemies = (enemies || []).filter(e => e.health > 0);
     /** @type {any} */
     const p = player;
     /** @param {number} cost */
@@ -345,18 +349,18 @@ async function playerCast(player, enemy, enemies, spellName) {
     };
 
     /**
-     * @param {any} target
+     * @param {Player | Enemy} target
      * @param {number} base
      */
     const hitSingle = (target, base) => {
-        if (!target || target.current_health <= 0) return 0;
+        if (!target || target.health <= 0) return 0;
         const { final } = calculateDamage(player, target, base);
         applyDamage(target, final);
         return final;
     };
 
     // Spell handlers
-    /** @type {Record<string, ()=>void>} */
+    /** @type {Record<string, () => Promise<void>>} */
     const handlers = {
         fireball: async () => {
             const def = getSpellDef('fireball');
@@ -481,8 +485,8 @@ async function playerCast(player, enemy, enemies, spellName) {
                 90 * TICKS_PER_SEC
             );
             // For now heal instantly but record cast time in log
-            p.current_health = p.max_life;
-            p.health = p.current_health;
+            p.health = p.max_life;
+            p.health = p.health;
             const castTimeHuman = Math.round(castTimeTicks / TICKS_PER_SEC);
             await dialog(
                 `${spellName} restores you to full health (cast time ${castTimeHuman}s).`
@@ -509,10 +513,10 @@ async function playerCast(player, enemy, enemies, spellName) {
             const cost = resolveManaCost(def, p) || 0;
             if (!(await spendMana(cost))) return;
             const percent = resolveParam(def, p, 'percent', 0.2);
-            const curr = p.current_health ?? p.health;
+            const curr = p.health ?? p.health;
             const sacrifice = Math.max(1, Math.round(curr * percent));
-            p.current_health = Math.max(1, curr - sacrifice);
-            p.health = p.current_health;
+            p.health = Math.max(1, curr - sacrifice);
+            p.health = p.health;
             let total = 0;
             for (const e of aliveEnemies) {
                 const share = Math.max(
@@ -653,9 +657,9 @@ function applyRegeneration(player, enemies) {
 
     // enemies regen
     for (const e of enemies) {
-        if (e.current_health <= 0) continue;
+        if (e.health <= 0) continue;
         const regen = e.health_regen || 0;
-        e.current_health = Math.min(e.health, e.current_health + regen);
+        e.health = Math.min(e.health, e.health + regen);
     }
 }
 
@@ -684,7 +688,7 @@ class Combat {
      */
     constructor({
         difficulty = DIFFICULTY.MEDIUM,
-        enemies = /** @type {any[]} */ ([]),
+        enemies = /** @type {Enemy[]} */ ([]),
         player = null,
         // default to 60 FPS
         tickIntervalMs = Math.round(1000 / 60)
@@ -700,48 +704,89 @@ class Combat {
      * @returns {Promise<{won:boolean, log:string[]}>}
      */
     async start() {
-        return new Promise(resolve => {
-            /** @type {any} */
+        return new Promise(async resolve => {
+            /** @type {Player} */
             const player = this.player;
-            Game.current.renderer.batch(() => {
-                Game.current.renderer.clear();
-                Game.current.renderer.entity(
+            const game = Game.current;
+            game.renderer.batch(() => {
+                game.renderer.clear();
+                game.renderer.entity(new BattleGround(), 0, 0);
+                game.renderer.entity(
                     player.get_entity(ORIENTATIONS.NORTHEAST, 10),
-                    Game.current.renderer.width * 0.25,
-                    Game.current.renderer.height * 0.1
+                    game.renderer.width * 0.25,
+                    game.renderer.height * 0.1
                 );
             });
-            /** @type {any[]} */
+            /** @type {Enemy[]} */
             const enemies = this.enemies || [];
+            const enemy_names = enemies.map(enemy => enemy.name);
+            console.log(enemies);
+            /**
+             * @param {string[]} enemy_names
+             */
+            function stringify(enemy_names) {
+                const [...set] = new Set(enemy_names);
+                const quantities = set.map(
+                    name =>
+                        /** @type {[string, number]} */ ([
+                            name,
+                            enemy_names.filter(enemy => enemy === name).length
+                        ])
+                );
+                const names = quantities.map(([name, quantity]) =>
+                    quantity === 1 ? name : `${quantity} ${name}s`
+                );
+                let res = /^[0-9]/.test(names[0]) ? '' : 'a';
+                if (/^[aeiou]/i.test(names[0])) {
+                    res += 'n';
+                }
+                if (!/^[0-9]/.test(names[0])) {
+                    res += ' ';
+                }
+                const len = names.length;
+                for (let index = 0; index < len; index++) {
+                    if (index > 0 && index < len - 1) {
+                        res += ', ';
+                    } else if (index > 0 && index === len - 1) {
+                        res += ' and ';
+                    }
+                    res += names[index];
+                }
+                return res;
+            }
+            await dialog(`You encounter ${stringify(enemy_names)}!`);
+            // await dialog(
+            //     `You encounter a${enemy_names[0].match(/^[aeiou]/i) ? 'n' : ''} ${enemy_names.length === 1 ? enemy_names[0] : enemy_names.map((name, index) => `${index === enemy_names.length - 1 ? ' and ' : ''}${name}${index < enemy_names.length - 2 ? ', ' : ''}`).join('')}!`
+            // );
+            await sleep(1000);
             /** @type {string[]} */
             const log = [];
 
             // ensure runtime fields exist
-            player.current_health =
-                player.current_health ?? player.health ?? player.max_life ?? 0;
+            // player.health =
+            //     player.health ?? player.health ?? player.max_life ?? 0;
             player.effects = player.effects || [];
             for (const e of enemies) {
-                e.current_health = e.current_health ?? e.health ?? 0;
                 e.effects = e.effects || [];
             }
 
             const fixedDt = 1000 / 60; // ms per tick (60Hz)
 
             // tick function that runs one logical tick
-            const doTick = async () => {
+            async function tick() {
                 // process effects
-                processEffects(player);
-                for (const e of enemies) processEffects(e);
+                await processEffects(player);
+                for (const e of enemies) await processEffects(e);
 
                 // apply regeneration
                 applyRegeneration(player, enemies);
 
                 // check for dead enemies
-                const aliveEnemies = enemies.filter(e => e.current_health > 0);
+                const alive_enemies = enemies.filter(e => e.health > 0);
 
                 // player action
-                if (player.current_health > 0) {
-                    const target = aliveEnemies[0];
+                if (player.health > 0) {
+                    const target = alive_enemies[0];
                     if (target) {
                         // choose action
                         if (player.stamina < 10 && player.mana < 12) {
@@ -760,9 +805,7 @@ class Combat {
                                 enemies,
                                 await select(
                                     'Choose an attack.',
-                                    Object.keys(SPELLS).map(name =>
-                                        name.toLowerCase()
-                                    )
+                                    SPELL_DEFINITIONS.map(spell => spell.name)
                                 )
                             );
                         }
@@ -771,7 +814,7 @@ class Combat {
                 }
 
                 // enemies act
-                for (const e of aliveEnemies) {
+                for (const e of alive_enemies) {
                     const speed =
                         typeof e.attack_speed === 'number'
                             ? e.attack_speed
@@ -781,86 +824,31 @@ class Combat {
                         await enemyAct(e, player);
                     }
                 }
-
-                // clamp player/enemy health to zero and update player.health for persistence
-                player.current_health = Math.max(
-                    0,
-                    Math.min(player.current_health, player.max_life)
-                );
-                player.health = player.current_health;
-
-                for (const e of enemies) {
-                    e.current_health = Math.max(
-                        0,
-                        Math.min(e.current_health, e.health)
-                    );
-                }
-            };
+            }
 
             // end check helper
             const checkEnd = async () => {
-                const anyEnemyAlive = enemies.some(e => e.current_health > 0);
-                const playerAlive = player.current_health > 0;
+                const anyEnemyAlive = enemies.some(e => e.health > 0);
+                const playerAlive = player.health > 0;
                 if (!playerAlive || !anyEnemyAlive) {
                     await dialog(
                         playerAlive && !anyEnemyAlive
                             ? 'You won the battle!'
                             : 'You were defeated...'
                     );
-                    // sync fields back to main
-                    player.health = player.current_health;
                     resolve({ won: playerAlive && !anyEnemyAlive, log });
                     return true;
                 }
                 return false;
             };
             async function loop() {
-                await doTick();
+                await tick();
                 if (await checkEnd()) {
                     return;
                 }
                 requestAnimationFrame(loop);
             }
             requestAnimationFrame(loop);
-            // // If running in a browser, use requestAnimationFrame with a fixed timestep accumulator
-            // const rAF =
-            //     typeof window !== 'undefined' &&
-            //     typeof window.requestAnimationFrame === 'function';
-            // if (rAF) {
-            //     let last =
-            //         typeof performance !== 'undefined' && performance.now
-            //             ? performance.now()
-            //             : Date.now();
-            //     let acc = 0;
-            //     let rafId = 0;
-            //     /** @param {number} now */
-            //     const frame = async now => {
-            //         acc += now - last;
-            //         last = now;
-            //         while (acc >= fixedDt) {
-            //             await doTick();
-            //             acc -= fixedDt;
-            //         }
-            //         if (await checkEnd()) {
-            //             if (
-            //                 typeof window !== 'undefined' &&
-            //                 typeof window.cancelAnimationFrame === 'function'
-            //             )
-            //                 window.cancelAnimationFrame(rafId);
-            //             return;
-            //         }
-            //         rafId = window.requestAnimationFrame(frame);
-            //     };
-            //     rafId = window.requestAnimationFrame(frame);
-            // } else {
-            //     // Node or non-browser environment: fallback to setInterval at configured tickIntervalMs (default ~16ms)
-            //     const interval = setInterval(async () => {
-            //         await doTick();
-            //         if (await checkEnd()) {
-            //             clearInterval(interval);
-            //         }
-            //     }, this.tickIntervalMs);
-            // }
         });
     }
 }
@@ -887,5 +875,5 @@ export {
     DIFFICULTY,
     pickEnemiesForDifficulty,
     playerCast,
-    playerMelee,
+    playerMelee
 };

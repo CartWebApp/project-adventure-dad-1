@@ -11,7 +11,14 @@ export const stamina_regen = 10;
 class Player {
     name;
     max_life;
-    health;
+    /** @type {number} */
+    #health;
+    get health() {
+        return this.#health;
+    }
+    set health(value) {
+        this.#health = Math.max(0, Math.min(value, this.max_life));
+    }
     max_mana;
     mana;
     max_stamina;
@@ -45,7 +52,7 @@ class Player {
         this.character = character;
         // defaults
         this.max_life = 100;
-        this.health = this.max_life;
+        this.#health = this.max_life;
         this.max_mana = 50;
         this.mana = this.max_mana;
         this.max_stamina = 100;
@@ -95,8 +102,8 @@ class Player {
                 this.character === CHARACTER_CHOICES.BEGGAR
                     ? 'beggar'
                     : this.character === CHARACTER_CHOICES.SLAVE
-                    ? 'slave'
-                    : 'knight_commander'
+                      ? 'slave'
+                      : 'knight_commander'
             }/${orientation}.png`,
             { scale }
         );

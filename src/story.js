@@ -4,7 +4,7 @@ import { CHARACTER_CHOICES, STATES, TIME_SLOWDOWN } from './constants.js';
 import { Game } from './game.js';
 import { Ground, Knight, Moon, Sun, Tree } from './objects.js';
 import { Renderer } from './renderer.js';
-import { clear, dialog, input, select } from './ui.js';
+import { clear, dialog, health, input, select, status_bar } from './ui.js';
 import {
     CombatBuilder,
     DIFFICULTY,
@@ -585,6 +585,14 @@ class Loop extends Step {
      * @param {(game: Game) => boolean} condition
      */
     until(condition) {
+        this.condition = game => !condition(game);
+        return this;
+    }
+
+    /**
+     * @param {(game: Game) => boolean} condition
+     */
+    while(condition) {
         this.condition = condition;
         return this;
     }
@@ -788,8 +796,11 @@ export const story = new Parallel(
         )
     )
     .then(
-        new Execute(() => {
+        new Execute(({ player }) => {
             clear();
+            status_bar(() => {
+                health(player.health / player.max_life);
+            });
         })
     )
     .then(

@@ -67,6 +67,9 @@ export class Game {
         this.renderer = renderer;
         this.load();
         document.body.addEventListener('keydown', e => {
+            if (this.player === undefined) {
+                return;
+            }
             console.log(e.key);
             if (e.key === 'ArrowLeft') {
                 this.player.direction = ORIENTATIONS.WEST;
@@ -75,11 +78,19 @@ export class Game {
                 this.player.direction = ORIENTATIONS.EAST;
                 this.player.x++;
             } else {
-                this.player.direction = this.player.direction === ORIENTATIONS.WEST ? ORIENTATIONS.NORTHWEST : this.player.direction === ORIENTATIONS.EAST ? ORIENTATIONS.NORTHEAST : this.player.direction;
+                this.player.direction =
+                    this.player.direction === ORIENTATIONS.WEST
+                        ? ORIENTATIONS.NORTHWEST
+                        : this.player.direction === ORIENTATIONS.EAST
+                          ? ORIENTATIONS.NORTHEAST
+                          : this.player.direction;
             }
             console.log(this.player.x);
         });
         document.body.addEventListener('keyup', e => {
+            if (this.player === undefined) {
+                return;
+            }
             if (e.key === 'ArrowLeft') {
                 this.player.direction = ORIENTATIONS.NORTHWEST;
             } else if (e.key === 'ArrowRight') {
@@ -92,9 +103,9 @@ export class Game {
         }
         this.current_step = Game.story;
         /**
-         * Due to the way the `Step` class and its extenders work, 
-         * the chaining may return a step far away from the first step. 
-         * So, we have to climb back up the tree of steps to find the first one. 
+         * Due to the way the `Step` class and its extenders work,
+         * the chaining may return a step far away from the first step.
+         * So, we have to climb back up the tree of steps to find the first one.
          */
         while (this.current_step?.prev || this.current_step?.parent) {
             if (this.current_step.prev !== null) {
@@ -129,7 +140,9 @@ export class Game {
             this.time = time;
             this.player = Object.assign(new Player('', 1), player);
             this.step_sequence = steps;
-            this.current_step = Step.goto(/** @type {number} */ (this.step_sequence.pop()));
+            this.current_step = Step.goto(
+                /** @type {number} */ (this.step_sequence.pop())
+            );
         }
     }
 }
