@@ -135,7 +135,7 @@ export class Game {
         if (localStorage.game !== undefined) {
             const { player, steps, time } = JSON.parse(localStorage.game);
             this.time = time;
-            this.player = Object.assign(new Player('', 1), player);
+            this.player = Object.assign(new Player(player.name, player.character), player);
             this.step_sequence = steps;
             this.current_step = Step.goto(
                 /** @type {number} */ (this.step_sequence.pop())

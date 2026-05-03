@@ -36,7 +36,7 @@ export class Ground extends Entity {
     /**
      * @param {Renderer} renderer
      */
-    render(renderer) {
+    async render(renderer) {
         const gradient = renderer.ctx.createLinearGradient(
             0,
             renderer.height * 0.65,
@@ -73,7 +73,7 @@ export class BattleGround extends Entity {
     /**
      * @param {Renderer} renderer
      */
-    render(renderer) {
+    async render(renderer) {
         const gradient = renderer.ctx.createLinearGradient(
             0,
             renderer.height * 0.45,
@@ -107,7 +107,7 @@ export class Moon extends Entity {
      * @param {number} x
      * @param {number} y
      */
-    render(renderer, x, y) {
+    async render(renderer, x, y) {
         renderer.ctx.fillStyle = '#ccc';
         renderer.polygon(
             ...this.outline.map(point => ({ x: point.x + x, y: point.y + y }))
@@ -140,7 +140,7 @@ export class Sun extends Entity {
      * @param {number} x
      * @param {number} y
      */
-    render(renderer, x, y) {
+    async render(renderer, x, y) {
         renderer.ctx.fillStyle = '#eda';
         renderer.polygon(
             ...this.outline.map(point => ({ x: point.x + x, y: point.y + y }))
@@ -190,7 +190,7 @@ export class Tree extends Entity {
      * @param {RaytracingRenderer} renderer
      * @param {number} x
      */
-    render(renderer, x) {
+    async render(renderer, x) {
         renderer.ctx.fillStyle = TREE_TRUNK_COLOR;
         renderer.rect(
             x + (TREE_WIDTH - TREE_TRUNK_WIDTH) / 2,
@@ -217,7 +217,7 @@ export class Tree extends Entity {
 }
 
 const canvas = document.createElement('canvas');
-const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
+const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d', { willReadFrequently: true }));
 
 /**
  * @param {InstanceType<(typeof globalThis)['Image']>} image
@@ -265,8 +265,10 @@ function get_outline(image) {
             reduced.push(curr);
         }
     }
-    console.log(reduced);
-    return reduced;
+    const min_x = Math.min(...reduced.map(({ x }) => x));
+    const min_y = Math.min(...reduced.map(({ y }) => y));
+    const aligned = reduced.map(({ x, y }) => ({ x: x - min_x, y: y - min_y }));
+    return aligned;
 }
 
 const resolved = Promise.resolve();
@@ -283,7 +285,7 @@ export class Image extends Entity {
      * Loads an image into cache, returning a `Promise` that resolves when it is loaded.
      * @param {string} src
      */
-    static preload(src, { width = 68, height = 68, scale = 1 } = {}) {
+    static preload(src, { width = 92, height = 92, scale = 1 } = {}) {
         const image = new Image(src, { width, height, scale });
         return image.promise;
     }
@@ -291,19 +293,24 @@ export class Image extends Entity {
     outline = [];
     /** @type {InstanceType<typeof globalThis['Image']>} */
     image;
+    canvas;
     width;
     height;
     scale;
     promise;
+    image_data;
 
     /**
      * @param {string} image
      */
-    constructor(image, { width = 68, height = 68, scale = 1 } = {}) {
+    constructor(image, { width = 92, height = 92, scale = 1 } = {}) {
         super();
         this.scale = scale;
         this.width = width;
         this.height = height;
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = width;
+        this.canvas.height = height;
         if (Image.cache.has(image)) {
             const { image: cached, outline } =
                 /** @type {{ image: InstanceType<(typeof globalThis)['Image']>; outline: Map<number, Array<{ x: number; y: number }>> }} */ (
@@ -330,6 +337,8 @@ export class Image extends Entity {
         this.image.addEventListener(
             'load',
             () => {
+                const ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+                ctx?.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
                 const cloned = /** @type {HTMLImageElement} */ (
                     this.image.cloneNode(true)
                 );
@@ -339,6 +348,7 @@ export class Image extends Entity {
                     image: cloned,
                     outline: new Map([[scale, this.outline]])
                 });
+                this.image_data = ctx?.getImageData(0, 0, this.canvas.width, this.canvas.height);
                 resolve();
             },
             { once: true }
@@ -350,8 +360,10 @@ export class Image extends Entity {
      * @param {number} x
      * @param {number} y
      */
-    render(renderer, x, y) {
+    async render(renderer, x, y) {
+        await this.promise;
         // renderer.ctx.scale(this.scale, this.scale);
+        // renderer.ctx.putImageData(this.image_data, x, y, 0, 0, this.image.width * this.scale, this.image.height * this.scale);
         renderer.ctx.drawImage(
             this.image,
             x,
@@ -366,6 +378,7 @@ export class Animation extends Entity {
     /** @type {Entity[]} */
     entities = [];
     state = 0;
+    layer = 4;
 
     /**
      * @param {Entity[]} entities
@@ -382,6 +395,7 @@ export class Animation extends Entity {
 
     next() {
         this.state = this.state === this.entities.length - 1 ? 0 : this.state + 1;
+        return this.state;
     }
 
     /**
@@ -389,7 +403,7 @@ export class Animation extends Entity {
      * @param {number} x
      * @param {number} y
      */
-    render(renderer, x, y) {
+    async render(renderer, x, y) {
         this.entities[this.state].render(renderer, x, y);
     }
 }

@@ -2,6 +2,7 @@ import { BaseBuilder, effects } from './combat.js';
 import { damageReduction, combatTimer } from './character.js';
 import { stamina_regen } from './character.js';
 import { DEV } from './env.js';
+import { asset } from './utils.js';
 
 /**
  * @param {string} spellName
@@ -68,7 +69,12 @@ const ATTRIBUTES_BY_RARITY = /** @type {const} */ ({
     epic: epicAttributes,
     legendary: legendaryAttributes
 });
-const RARITY_ORDER = /** @type {const} */ (['common', 'rare', 'epic', 'legendary']);
+const RARITY_ORDER = /** @type {const} */ ([
+    'common',
+    'rare',
+    'epic',
+    'legendary'
+]);
 const WEIGHT_BY_RARITY = { common: 1, rare: 2, epic: 4, legendary: 8 };
 
 /**
@@ -544,7 +550,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(5 * GOLD)
-        .with_assets([`.${DEV ? './assets' : ''}/holy_hand_grenade.png`])
+        .with_assets([asset(`holy_hand_grenade.png`)])
         .build(),
     new ItemBuilder()
         .with_name('Rock')
@@ -552,7 +558,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(2 * COPPER)
-        .with_assets([`.${DEV ? './assets' : ''}/rock.png`])
+        .with_assets([asset(`rock.png`)])
         .build(),
     new ItemBuilder()
         .with_name('Molotov Cocktail')
@@ -562,7 +568,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(30 * SILVER)
-        .with_assets([`.${DEV ? './assets' : ''}/molotov_cocktail.png`])
+        .with_assets([asset(`molotov_cocktail.png`)])
         .build(),
     new ItemBuilder()
         .with_name('Old Boot')
@@ -570,7 +576,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(1 * COPPER)
-        .with_assets([`.${DEV ? './assets' : ''}/old_boot.png`])
+        .with_assets([asset(`old_boot.png`)])
         .build(),
     new ItemBuilder()
         .with_name('Potato')
@@ -581,7 +587,7 @@ const items = [
         .with_uses(1)
         .with_edible_uses(1)
         .with_value(10 * COPPER)
-        .with_assets([`.${DEV ? './assets' : ''}/potato.png`])
+        .with_assets([asset(`potato.png`)])
         .build(),
     new ItemBuilder()
         .with_name('Thinkpad X1 Carbon')
@@ -591,7 +597,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(10 * GOLD)
-        .with_assets([`.${DEV ? './assets' : ''}/thinkpad_x1_carbon.png`])
+        .with_assets([asset(`thinkpad_x1_carbon.png`)])
         .build(),
     new ItemBuilder()
         .with_name('Sock Puppet')
@@ -600,14 +606,14 @@ const items = [
         .with_uses(1)
         .with_value(10 * COPPER)
         .with_assets([
-            `.${DEV ? './assets' : ''}/sock_puppet_1.png`,
-            `.${DEV ? './assets' : ''}/sock_puppet_2.png`,
-            `.${DEV ? './assets' : ''}/sock_puppet_3.png`,
-            `.${DEV ? './assets' : ''}/sock_puppet_4.png`,
-            `.${DEV ? './assets' : ''}/sock_puppet_5.png`,
-            `.${DEV ? './assets' : ''}/sock_puppet_6.png`,
-            `.${DEV ? './assets' : ''}/sock_puppet_7.png`,
-            `.${DEV ? './assets' : ''}/sock_puppet_8.png`
+            asset(`sock_puppet_1.png`),
+            asset(`sock_puppet_2.png`),
+            asset(`sock_puppet_3.png`),
+            asset(`sock_puppet_4.png`),
+            asset(`sock_puppet_5.png`),
+            asset(`sock_puppet_6.png`),
+            asset(`sock_puppet_7.png`),
+            asset(`sock_puppet_8.png`)
         ])
         .build(),
     new ItemBuilder()
@@ -619,11 +625,11 @@ const items = [
         .with_uses(1)
         .with_value(15 * SILVER)
         .with_assets([
-            `.${DEV ? './assets' : ''}/the_last_straw_1.png`,
-            `.${DEV ? './assets' : ''}/the_last_straw_2.png`,
-            `.${DEV ? './assets' : ''}/the_last_straw_3.png`,
-            `.${DEV ? './assets' : ''}/the_last_straw_4.png`,
-            `.${DEV ? './assets' : ''}/the_last_straw_5.png`
+            asset(`the_last_straw_1.png`),
+            asset(`the_last_straw_2.png`),
+            asset(`the_last_straw_3.png`),
+            asset(`the_last_straw_4.png`),
+            asset(`the_last_straw_5.png`)
         ])
         .build(),
     new ItemBuilder()
@@ -632,7 +638,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(10 * COPPER)
-        .with_assets([`.${DEV ? './assets' : ''}/napkin.png`])
+        .with_assets([asset(`napkin.png`)])
         .build(),
     new ItemBuilder()
         .with_name('Anvil')
@@ -640,7 +646,7 @@ const items = [
         .with_throwable(true)
         .with_uses(3)
         .with_value(50 * SILVER)
-        .with_assets([`.${DEV ? './assets' : ''}/anvil.png`])
+        .with_assets([asset(`anvil.png`)])
         .build()
 ];
 

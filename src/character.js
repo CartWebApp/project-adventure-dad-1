@@ -1,8 +1,9 @@
 // @ts-check
 import { CHARACTER_CHOICES, ORIENTATIONS } from './constants.js';
 import { DEV } from './env.js';
-import { Image } from './objects.js';
+import { Animation, Image } from './objects.js';
 import { Spell } from './obtainables.js';
+import { asset } from './utils.js';
 export const damageReduction = 0;
 export const combatTimer = 100;
 export const stamina_regen = 10;
@@ -43,6 +44,8 @@ class Player {
     x = 500;
     /** @type {(typeof ORIENTATIONS)[keyof typeof ORIENTATIONS]} */
     direction = ORIENTATIONS.EAST;
+    /** @type {Animation} */
+    cast_animation;
 
     /**
      * @param {string} name
@@ -86,10 +89,26 @@ class Player {
             spells: []
         };
         this.money = 0;
+        this.cast_animation = new Animation(
+            ...Array(this.character === CHARACTER_CHOICES.SLAVE ? 7 : 8)
+                .fill(0)
+                .map(
+                    (_, index) =>
+                        asset(`${
+                            this.character === CHARACTER_CHOICES.BEGGAR
+                                ? 'beggar'
+                                : this.character === CHARACTER_CHOICES.SLAVE
+                                  ? 'slave'
+                                  : 'knight'
+                        }/cast/${index + 1}.png`)
+                )
+                .map(name => new Image(name, { width: 92, height: 92, scale: 5 }))
+        );
     }
 
     toJSON() {
-        const { equip, applyAttributes, get_entity, ...props } = this;
+        const { equip, applyAttributes, get_entity,
+            cast_animation, ...props } = this;
         return props;
     }
 
@@ -99,13 +118,13 @@ class Player {
      */
     get_entity(orientation, scale) {
         return new Image(
-            `.${DEV ? './assets' : ''}/${
+            asset(`${
                 this.character === CHARACTER_CHOICES.BEGGAR
                     ? 'beggar'
                     : this.character === CHARACTER_CHOICES.SLAVE
                       ? 'slave'
-                      : 'knight_commander'
-            }/${orientation}.png`,
+                      : 'knight'
+            }/${orientation}.png`),
             { scale }
         );
     }

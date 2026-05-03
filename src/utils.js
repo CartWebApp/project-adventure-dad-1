@@ -1,3 +1,5 @@
+import { DEV } from './env.js';
+
 /** @import { Entity } from './raytracing.js' */
 
 export function pixelator(level = 2) {
@@ -84,6 +86,17 @@ export function sleep(ms) {
 }
 
 /**
+ * @param {string} path
+ */
+export function asset(path) {
+    path = path.startsWith('/') ? path : `/${path}`;
+    if (DEV) {
+        return `../assets${path}`;
+    }
+    return `.${path}`;
+}
+
+/**
  * @param {number} start
  * @param {number} end
  * @param {number} degree
@@ -94,10 +107,20 @@ export function interpolate(start, end, degree) {
 }
 
 /**
- * A `Map`-like object that allows the retrieval of values 
- * at points that are not defined, using linear interpolation 
+ * A `Map`-like object that allows the retrieval of values
+ * at points that are not defined, using linear interpolation
  * based on the points that are defined.
- * 
+ *
+ * Example:
+ * ```js
+ * const map = new InterpolatingDoubleTreeMap();
+ *
+ * map.set(10, 0);
+ * map.set(20, 1);
+ *
+ * map.get(15); // 0.5
+ * ```
+ *
  * Based on [WPILib's implementation](https://github.wpilib.org/allwpilib/docs/release/java/edu/wpi/first/math/interpolation/InterpolatingDoubleTreeMap.html)
  */
 export class InterpolatingDoubleTreeMap {

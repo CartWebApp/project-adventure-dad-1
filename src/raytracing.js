@@ -32,7 +32,7 @@ export class Entity {
      * @param {number} x
      * @param {number} y
      */
-    render(renderer, x, y) {}
+    async render(renderer, x, y) {}
 }
 
 /**
@@ -225,7 +225,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         this.ctx.save();
         await fn();
         this.ctx.restore();
-        this.#render();
+        await this.#render();
     }
 
     #queue_render() {
@@ -247,6 +247,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         const entities = [...this.#entities].toSorted(
             (a, b) => a.entity.layer - b.entity.layer
         );
+        await new Promise(resolve => requestAnimationFrame(resolve));
         this.#entities.length = 0;
         [this.#hidden_frame.style.zIndex, this.#current_frame.style.zIndex] = [
             this.#current_frame.style.zIndex,
@@ -263,7 +264,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         this.display = this.#hidden_frame;
         this.display_ctx = this.#hidden_ctx;
         try {
-            super.batch(() => {
+            await super.batch_async(async () => {
                 super.clear();
                 this.#background(this);
                 // console.log(this.#map);
@@ -280,7 +281,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                             )
                         );
                     if (this.#is_on_screen(e)) {
-                        entity.render(this, x, y);
+                        await entity.render(this, x, y);
                     }
                     // TODO make this better
                     // we need to accurately determine whether it is safe to skip the raytracing of an entity
@@ -327,6 +328,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         } catch (err) {
             console.log(err);
         }
+        await new Promise(resolve => requestAnimationFrame(resolve));
         requestAnimationFrame(() => {
             [
                 this.#hidden_frame.style.zIndex,

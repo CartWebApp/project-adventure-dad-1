@@ -11,7 +11,7 @@ import { spells as SPELL_DEFINITIONS } from './obtainables.js';
 import { Player } from './character.js';
 import { TICKS_PER_SEC } from './combat.js';
 import { castSpell as correctSpellCast } from './spells.js';
-import { dialog, input, select } from './ui.js';
+import { clear, dialog, input, select } from './ui.js';
 import { Game } from './game.js';
 import { ORIENTATIONS } from './constants.js';
 import { SPELLS } from './spells.js';
@@ -708,12 +708,14 @@ class Combat {
             /** @type {Player} */
             const player = this.player;
             const game = Game.current;
+            const cast_animation = player.cast_animation;
+            cast_animation.state = 0;
             game.renderer.batch(() => {
                 game.renderer.clear();
                 game.renderer.entity(new BattleGround(), 0, 0);
                 game.renderer.entity(
                     player.get_entity(ORIENTATIONS.NORTHEAST, 10),
-                    game.renderer.width * 0.25,
+                    game.renderer.width * 0.1,
                     game.renderer.height * 0.1
                 );
             });
@@ -808,6 +810,33 @@ class Combat {
                                     SPELL_DEFINITIONS.map(spell => spell.name)
                                 )
                             );
+                            clear();
+                            while (cast_animation.next() !== 0) {
+                                game.renderer.batch(() => {
+                                    game.renderer.clear();
+                                    game.renderer.entity(
+                                        new BattleGround(),
+                                        0,
+                                        0
+                                    );
+                                    game.renderer.entity(
+                                        cast_animation,
+                                        game.renderer.width * 0.1,
+                                        game.renderer.height * 0.1
+                                    );
+                                });
+                                await sleep(200);
+                            }
+                            // await sleep(1000);
+                            // game.renderer.batch(() => {
+                            //     game.renderer.clear();
+                            //     game.renderer.entity(new BattleGround(), 0, 0);
+                            //     game.renderer.entity(
+                            //         player.get_entity(ORIENTATIONS.NORTHEAST, 10),
+                            //         game.renderer.width * 0.25,
+                            //         game.renderer.height * 0.1
+                            //     );
+                            // });
                         }
                     }
                     // Player action code goes here -------------------------------->
