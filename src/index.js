@@ -3,10 +3,7 @@ import { TIME_SLOWDOWN } from './constants.js';
 import { RaytracingRenderer } from './raytracing.js';
 import { interpolate, pixelator } from './utils.js';
 import './images.js';
-const { Game } = await import('./game.js').then(async res => {
-    await import('./story.js');
-    return res;
-});
+import { Game } from './game.js';
 const canvas = /** @type {HTMLCanvasElement} */ (
     document.querySelector('canvas.raytraced')
 );

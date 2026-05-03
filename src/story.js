@@ -2,7 +2,7 @@ import { Player } from './character.js';
 import { Entity } from './combat.js';
 import { CHARACTER_CHOICES, STATES, TIME_SLOWDOWN } from './constants.js';
 import { Game } from './game.js';
-import { Ground, Knight, Moon, Sun, Tree } from './objects.js';
+// import { Ground, Knight, Moon, Sun, Tree } from './objects.js';
 import { Renderer } from './renderer.js';
 import { clear, dialog, health, input, select, status_bar } from './ui.js';
 import {
@@ -149,6 +149,7 @@ class Execute extends Step {
 }
 
 class BattleEncounter extends Step {
+    state = STATES.BATTLE;
     difficulty;
 
     static Loss = class Loss extends Step {
