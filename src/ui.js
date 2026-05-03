@@ -151,7 +151,10 @@ export function select(text, choices, render_icon = () => {}) {
     let init = true;
     let tick = 0;
     const lines = split_lines(text);
-    const height = Math.max(renderer.height * 0.2, lines.length * 22 + choices.length * 22 + 88);
+    const height = Math.max(
+        renderer.height * 0.2,
+        lines.length * 22 + choices.length * 22 + 88
+    );
     async function render() {
         renderer.ctx.fillStyle = 'white';
         renderer.ctx.font = '22px monospace, Noto Color Emoji';
@@ -542,7 +545,7 @@ export async function input(
  * Since I'm too lazy to figure out the math to
  * calculate the color based on the health value,
  * we just use linear interpolation :)
- * 
+ *
  */
 const health_color_r = new InterpolatingDoubleTreeMap();
 const health_color_g = new InterpolatingDoubleTreeMap();
@@ -568,39 +571,39 @@ export function health(amount) {
     const length = amount * renderer.width * 0.2;
     renderer.ctx.save();
     // renderer.batch(() => {
-        renderer.ctx.lineCap = 'round';
-        renderer.ctx.lineJoin = 'round';
-        renderer.ctx.lineWidth = 25;
-        renderer.ctx.strokeStyle = '#260048';
-        renderer.line(
-            {
-                x: renderer.width * 0.35,
-                y: renderer.height * 0.05
-            },
-            {
-                x: renderer.width * 0.55,
-                y: renderer.height * 0.05
-            }
-        );
-        renderer.ctx.lineCap = 'round';
-        renderer.ctx.lineJoin = 'round';
-        renderer.ctx.lineWidth = 20;
-        const r = health_color_r.get(amount) | 0;
-        const g = health_color_g.get(amount) | 0;
-        const b = health_color_b.get(amount) | 0;
-        // console.log({ r, g, b });
-        renderer.ctx.strokeStyle = `#${r.toString(16)}${g.toString(16)}${b.toString(16)}`;
-        // console.log(renderer.ctx.strokeStyle);
-        renderer.line(
-            {
-                x: renderer.width * 0.35,
-                y: renderer.height * 0.05
-            },
-            {
-                x: renderer.width * 0.35 + length,
-                y: renderer.height * 0.05
-            }
-        );
+    renderer.ctx.lineCap = 'round';
+    renderer.ctx.lineJoin = 'round';
+    renderer.ctx.lineWidth = 25;
+    renderer.ctx.strokeStyle = '#260048';
+    renderer.line(
+        {
+            x: renderer.width * 0.35,
+            y: renderer.height * 0.05
+        },
+        {
+            x: renderer.width * 0.55,
+            y: renderer.height * 0.05
+        }
+    );
+    renderer.ctx.lineCap = 'round';
+    renderer.ctx.lineJoin = 'round';
+    renderer.ctx.lineWidth = 20;
+    const r = health_color_r.get(amount) | 0;
+    const g = health_color_g.get(amount) | 0;
+    const b = health_color_b.get(amount) | 0;
+    // console.log({ r, g, b });
+    renderer.ctx.strokeStyle = `#${r.toString(16)}${g.toString(16)}${b.toString(16)}`;
+    // console.log(renderer.ctx.strokeStyle);
+    renderer.line(
+        {
+            x: renderer.width * 0.35,
+            y: renderer.height * 0.05
+        },
+        {
+            x: renderer.width * 0.35 + length,
+            y: renderer.height * 0.05
+        }
+    );
     // });
     renderer.ctx.restore();
 }

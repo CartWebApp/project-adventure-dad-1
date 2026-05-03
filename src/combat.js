@@ -138,7 +138,10 @@ const effects = {
     }),
 
     // Blindness: Reduces visibility/accuracy by x% over y time (duration in ticks)
-    blindness: (durationTicks = 5 * TICKS_PER_SEC, accuracyPenaltyPercent = 50) => ({
+    blindness: (
+        durationTicks = 5 * TICKS_PER_SEC,
+        accuracyPenaltyPercent = 50
+    ) => ({
         name: 'Blindness',
         type: 'accuracyDebuff',
         accuracyPenaltyPercent,
@@ -186,7 +189,11 @@ const effects = {
     }),
 
     // Rooted: Affected individual always is hit with attacks, deals 1 damage every second over 5 seconds
-    rooted: (durationTicks = 5 * TICKS_PER_SEC, damagePerTick = 1 / TICKS_PER_SEC, alwaysHit = true) => ({
+    rooted: (
+        durationTicks = 5 * TICKS_PER_SEC,
+        damagePerTick = 1 / TICKS_PER_SEC,
+        alwaysHit = true
+    ) => ({
         name: 'Rooted',
         type: 'root',
         alwaysHit,

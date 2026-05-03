@@ -277,10 +277,10 @@ export class Image extends Entity {
     static cache = new Map();
 
     /**
-     * Loads an image into cache, returning a `Promise` that resolves when it is loaded. 
+     * Loads an image into cache, returning a `Promise` that resolves when it is loaded.
      * @param {string} src
      */
-    static preload(src, { width = 68, height = 68, scale = 1} = {}) {
+    static preload(src, { width = 68, height = 68, scale = 1 } = {}) {
         const image = new Image(src, { width, height, scale });
         return image.promise;
     }
@@ -296,19 +296,26 @@ export class Image extends Entity {
     /**
      * @param {string} image
      */
-    constructor(image, { width = 68, height = 68, scale = 1} = {}) {
+    constructor(image, { width = 68, height = 68, scale = 1 } = {}) {
         super();
         this.scale = scale;
         this.width = width;
         this.height = height;
         if (Image.cache.has(image)) {
-            const { image: cached, outline } = /** @type {{ image: InstanceType<(typeof globalThis)['Image']>; outline: Map<number, Array<{ x: number; y: number }>> }} */ (
-                Image.cache.get(image)
+            const { image: cached, outline } =
+                /** @type {{ image: InstanceType<(typeof globalThis)['Image']>; outline: Map<number, Array<{ x: number; y: number }>> }} */ (
+                    Image.cache.get(image)
+                );
+            this.image = /** @type {HTMLImageElement} */ (
+                cached.cloneNode(true)
             );
-            this.image = /** @type {HTMLImageElement} */ (cached.cloneNode(true));
             this.image.width *= scale;
             this.image.height *= scale;
-            this.outline = outline.has(scale) ? /** @type {Array<{ x: number; y: number }>} */ (outline.get(scale)) : get_outline(this.image);
+            this.outline = outline.has(scale)
+                ? /** @type {Array<{ x: number; y: number }>} */ (
+                      outline.get(scale)
+                  )
+                : get_outline(this.image);
             this.promise = resolved;
             return;
         }
@@ -320,7 +327,9 @@ export class Image extends Entity {
         this.image.addEventListener(
             'load',
             () => {
-                const cloned = /** @type {HTMLImageElement} */ (this.image.cloneNode(true));
+                const cloned = /** @type {HTMLImageElement} */ (
+                    this.image.cloneNode(true)
+                );
                 console.log(this.image.width);
                 this.outline = get_outline(this.image);
                 Image.cache.set(image, {
@@ -340,7 +349,13 @@ export class Image extends Entity {
      */
     render(renderer, x, y) {
         // renderer.ctx.scale(this.scale, this.scale);
-        renderer.ctx.drawImage(this.image, x, y, this.image.width * this.scale, this.height * this.scale);
+        renderer.ctx.drawImage(
+            this.image,
+            x,
+            y,
+            this.image.width * this.scale,
+            this.height * this.scale
+        );
     }
 }
 

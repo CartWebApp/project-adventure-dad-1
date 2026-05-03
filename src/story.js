@@ -53,7 +53,7 @@ export class Step {
     /**
      * @param {Game} game
      */
-    async execute(game) { }
+    async execute(game) {}
     /**
      * @param {(typeof STATES)[keyof typeof STATES]} state
      */
@@ -96,7 +96,7 @@ class Branch extends Step {
      */
     with_branches(...branches) {
         this.branches = branches.map(branch =>
-            branch !== null ? branch : new Execute(() => { })
+            branch !== null ? branch : new Execute(() => {})
         );
         for (const branch of this.branches) {
             branch.parent = this;
@@ -260,15 +260,15 @@ class BattleEncounter extends Step {
                 difficulty === DIFFICULTY.EASY
                     ? 0.3
                     : difficulty === DIFFICULTY.MEDIUM
-                    ? 0.6
-                    : 0.9;
+                      ? 0.6
+                      : 0.9;
             if (Math.random() < armorChance) {
                 const rarity =
                     difficulty === DIFFICULTY.EASY
                         ? 'common'
                         : difficulty === DIFFICULTY.MEDIUM
-                        ? 'rare'
-                        : 'epic';
+                          ? 'rare'
+                          : 'epic';
                 const armorPool = getArmorForRarity(rarity) || [];
                 if (armorPool.length > 0) {
                     const chosenArmor = JSON.parse(
@@ -287,16 +287,16 @@ class BattleEncounter extends Step {
                 difficulty === DIFFICULTY.EASY
                     ? 0.2
                     : difficulty === DIFFICULTY.MEDIUM
-                    ? 0.5
-                    : 0.8;
+                      ? 0.5
+                      : 0.8;
             if (Math.random() < spellChance && spells.length > 0) {
                 // Prefer spells that have params or costs for the target rarity
                 const targetRarity =
                     difficulty === DIFFICULTY.EASY
                         ? 'common'
                         : difficulty === DIFFICULTY.MEDIUM
-                        ? 'rare'
-                        : 'epic';
+                          ? 'rare'
+                          : 'epic';
                 const candidates = spells.filter(s => {
                     return (
                         (s.params_by_rarity &&
@@ -391,7 +391,7 @@ class Battle extends Step {
         while (
             opponents.some(opponent => opponent.health > 0) ||
             game.player.health > 0
-        ) { }
+        ) {}
     }
 
     /**
@@ -430,7 +430,7 @@ class Input extends Step {
     /** @type {T | undefined} */
     value;
     /** @type {(value: T) => void} */
-    handler = () => { };
+    handler = () => {};
     max_length = Infinity;
     /**
      * @param {string} prompt
@@ -482,7 +482,7 @@ class Input extends Step {
 class Dialog extends Step {
     dialog;
     /** @type {(renderer: Renderer, x: number, y: number) => void} */
-    render_icon = () => { };
+    render_icon = () => {};
     per_letter_duration = 75;
     /**
      * @param {string} dialog
@@ -819,6 +819,6 @@ export const story = new Parallel(
                 game.renderer.refresh();
 
                 await new Promise(resolve => setTimeout(resolve, 100));
-            }),
+            })
         )
     );

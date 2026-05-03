@@ -267,7 +267,7 @@ class Renderer {
         #async_batch_controller = {
             cancel() {
                 throw new Renderer.Offscreen.BatchCancellationError();
-            },
+            }
         };
 
         /**

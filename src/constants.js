@@ -16,7 +16,7 @@ export const STATES = /** @type {const} */ ({
     TRAVEL: 1,
     DIALOGUE: 2,
     TRADE: 3,
-    BATTLE: 4,
+    BATTLE: 4
 });
 export const CHARACTER_CHOICES = /** @type {const} */ ({
     KNIGHT: 1,
@@ -31,5 +31,5 @@ export const ORIENTATIONS = /** @type {const} */ ({
     NORTHWEST: 'north-west',
     NORTHEAST: 'north-east',
     SOUTHWEST: 'south-west',
-    SOUTHEAST: 'south-east',
+    SOUTHEAST: 'south-east'
 });
