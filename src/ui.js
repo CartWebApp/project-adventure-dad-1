@@ -567,10 +567,8 @@ let last_health = 1;
  * @param {number} amount
  */
 export function health(amount) {
-    // console.log(amount);
     const length = amount * renderer.width * 0.2;
     renderer.ctx.save();
-    // renderer.batch(() => {
     renderer.ctx.lineCap = 'round';
     renderer.ctx.lineJoin = 'round';
     renderer.ctx.lineWidth = 25;
@@ -591,9 +589,7 @@ export function health(amount) {
     const r = health_color_r.get(amount) | 0;
     const g = health_color_g.get(amount) | 0;
     const b = health_color_b.get(amount) | 0;
-    // console.log({ r, g, b });
-    renderer.ctx.strokeStyle = `#${r.toString(16)}${g.toString(16)}${b.toString(16)}`;
-    // console.log(renderer.ctx.strokeStyle);
+    renderer.ctx.strokeStyle = `rgb(${r}, ${g}, ${b})`;
     renderer.line(
         {
             x: renderer.width * 0.35,
@@ -604,7 +600,6 @@ export function health(amount) {
             y: renderer.height * 0.05
         }
     );
-    // });
     renderer.ctx.restore();
 }
 

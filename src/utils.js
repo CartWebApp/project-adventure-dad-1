@@ -73,7 +73,6 @@ export function circle(radius, step = 1) {
             y
         });
     }
-    // console.log({ points });
     return points;
 }
 
@@ -94,6 +93,13 @@ export function interpolate(start, end, degree) {
     return start + delta;
 }
 
+/**
+ * A `Map`-like object that allows the retrieval of values 
+ * at points that are not defined, using linear interpolation 
+ * based on the points that are defined.
+ * 
+ * Based on [WPILib's implementation](https://github.wpilib.org/allwpilib/docs/release/java/edu/wpi/first/math/interpolation/InterpolatingDoubleTreeMap.html)
+ */
 export class InterpolatingDoubleTreeMap {
     /** @type {Array<[number, number]>} */
     #entries = [];

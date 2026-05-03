@@ -70,7 +70,6 @@ export class Game {
             if (this.player === undefined) {
                 return;
             }
-            console.log(e.key);
             if (e.key === 'ArrowLeft') {
                 this.player.direction = ORIENTATIONS.WEST;
                 this.player.x--;
@@ -85,7 +84,6 @@ export class Game {
                           ? ORIENTATIONS.NORTHEAST
                           : this.player.direction;
             }
-            console.log(this.player.x);
         });
         document.body.addEventListener('keyup', e => {
             if (this.player === undefined) {
@@ -96,7 +94,6 @@ export class Game {
             } else if (e.key === 'ArrowRight') {
                 this.player.direction = ORIENTATIONS.NORTHEAST;
             }
-            console.log(this.player.x);
         });
         if (this.current_step !== null) {
             return;

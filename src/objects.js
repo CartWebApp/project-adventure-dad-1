@@ -271,6 +271,9 @@ function get_outline(image) {
 
 const resolved = Promise.resolve();
 
+/**
+ * Creates an `Entity` based on an image.
+ */
 export class Image extends Entity {
     layer = 4;
     /** @type {Map<string, { image: InstanceType<(typeof globalThis)['Image']>; outline: Map<number, Array<{ x: number; y: number }>> }>} */
