@@ -303,6 +303,7 @@ export async function dialog(
         throw new Error('Race condition');
     }
     locked = true;
+    /** @type {PromiseWithResolvers<void>} */
     const { promise, resolve } = Promise.withResolvers();
     await renderer.batch_async(async () => {
         renderer.clear();
@@ -352,6 +353,9 @@ export async function dialog(
             );
         }
     });
+    /**
+     * @param {KeyboardEvent} e
+     */
     function handler(e) {
         if (e.key === 'Enter') {
             resolve();
@@ -601,6 +605,9 @@ export function health(amount) {
     renderer.ctx.restore();
 }
 
+/**
+ * @param {() => void} fn
+ */
 export function status_bar(fn) {
     render_status_bar = fn;
 }

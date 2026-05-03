@@ -269,10 +269,21 @@ function get_outline(image) {
     return reduced;
 }
 
+const resolved = Promise.resolve();
+
 export class Image extends Entity {
     layer = 4;
     /** @type {Map<string, { image: InstanceType<(typeof globalThis)['Image']>; outline: Map<number, Array<{ x: number; y: number }>> }>} */
     static cache = new Map();
+
+    /**
+     * Loads an image into cache, returning a `Promise` that resolves when it is loaded. 
+     * @param {string} src
+     */
+    static preload(src, { width = 68, height = 68, scale = 1} = {}) {
+        const image = new Image(src, { width, height, scale });
+        return image.promise;
+    }
     /** @type {Array<{ x: number; y: number }>} */
     outline = [];
     /** @type {InstanceType<typeof globalThis['Image']>} */
@@ -280,6 +291,7 @@ export class Image extends Entity {
     width;
     height;
     scale;
+    promise;
 
     /**
      * @param {string} image
@@ -297,10 +309,14 @@ export class Image extends Entity {
             this.image.width *= scale;
             this.image.height *= scale;
             this.outline = outline.has(scale) ? /** @type {Array<{ x: number; y: number }>} */ (outline.get(scale)) : get_outline(this.image);
+            this.promise = resolved;
             return;
         }
         this.image = new globalThis.Image(width, height);
         this.image.src = image;
+        /** @type {PromiseWithResolvers<void>} */
+        const { promise, resolve } = Promise.withResolvers();
+        this.promise = promise;
         this.image.addEventListener(
             'load',
             () => {
@@ -311,6 +327,7 @@ export class Image extends Entity {
                     image: cloned,
                     outline: new Map([[scale, this.outline]])
                 });
+                resolve();
             },
             { once: true }
         );
