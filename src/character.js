@@ -1,5 +1,6 @@
 // @ts-check
 import { CHARACTER_CHOICES, ORIENTATIONS } from './constants.js';
+import { DEV } from './env.js';
 import { Image } from './objects.js';
 import { Spell } from './obtainables.js';
 export const damageReduction = 0;
@@ -98,7 +99,7 @@ class Player {
      */
     get_entity(orientation, scale) {
         return new Image(
-            `../assets/${
+            `.${DEV ? './assets' : ''}/${
                 this.character === CHARACTER_CHOICES.BEGGAR
                     ? 'beggar'
                     : this.character === CHARACTER_CHOICES.SLAVE

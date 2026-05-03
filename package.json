@@ -4,6 +4,7 @@
         "build": "bash ./scripts/build.sh"
     },
     "dependencies": {
+        "@rollup/plugin-alias": "^6.0.0",
         "@rollup/plugin-node-resolve": "^16.0.3",
         "@rollup/plugin-terser": "^1.0.0",
         "image-size": "^2.0.2",

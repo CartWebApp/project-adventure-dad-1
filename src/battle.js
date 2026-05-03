@@ -701,7 +701,7 @@ class Combat {
 
     /**
      * Start the battle loop. Returns { won: boolean, log: string[] }
-     * @returns {Promise<{won:boolean, log:string[]}>}
+     * @returns {Promise<{ won:boolean, log:string[] }>}
      */
     async start() {
         return new Promise(async resolve => {

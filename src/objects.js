@@ -361,15 +361,35 @@ export class Image extends Entity {
         );
     }
 }
+ 
+export class Animation extends Entity {
+    /** @type {Entity[]} */
+    entities = [];
+    state = 0;
 
-export class Knight extends Image {
-    /** @type {Knight | null} */
-    static instance = null;
-    static get_instance() {
-        return (this.instance ??= new Knight());
+    /**
+     * @param {Entity[]} entities
+     */
+    constructor(...entities) {
+        super();
+        this.entities = entities;
     }
-    layer = 10;
-    constructor() {
-        super('../assets/knight_commander/south-east.png');
+
+    // @ts-expect-error
+    get outline() {
+        return this.entities[this.state].outline;
+    }
+
+    next() {
+        this.state = this.state === this.entities.length - 1 ? 0 : this.state + 1;
+    }
+
+    /**
+     * @param {Renderer} renderer
+     * @param {number} x
+     * @param {number} y
+     */
+    render(renderer, x, y) {
+        this.entities[this.state].render(renderer, x, y);
     }
 }
