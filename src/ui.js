@@ -1,3 +1,5 @@
+import { Player } from './character.js';
+import { Game } from './game.js';
 import { Renderer } from './renderer.js';
 import {
     InterpolatingDoubleTreeMap,
@@ -12,7 +14,7 @@ ui_canvas.style.display = 'none';
 ui_canvas.height = window.innerHeight;
 ui_canvas.width = window.innerWidth;
 const display = document.createElement('canvas');
-document.body.append(display);
+document.body.firstElementChild?.append(display);
 display.height = window.innerHeight / 2;
 display.width = window.innerWidth / 2;
 display.classList.add('ui');
@@ -24,7 +26,10 @@ window.addEventListener('resize', () => {
 const renderer = new Renderer.Offscreen(
     ui_canvas,
     display,
-    canvas => (render_status_bar(), canvas)
+    canvas => {
+        render_status_bar();
+        return canvas;
+    }
 );
 
 renderer.ctx.fillStyle = 'white';
@@ -503,6 +508,7 @@ export async function input(
 const health_color_r = new InterpolatingDoubleTreeMap();
 const health_color_g = new InterpolatingDoubleTreeMap();
 const health_color_b = new InterpolatingDoubleTreeMap();
+
 health_color_r.set(0, 0xff);
 health_color_g.set(0, 0x33);
 health_color_b.set(0, 0x33);
@@ -560,9 +566,79 @@ export function health(amount) {
  * @param {() => void} fn
  */
 export function status_bar(fn) {
+    const first_time = render_status_bar.toString() === '() => {}'
     render_status_bar = fn;
+    if (first_time) {
+        inventory(Game.current.player);
+    }
+}
+
+function clear_nobatch() {
+    renderer.clear();
 }
 
 export function clear() {
     renderer.batch(() => renderer.clear());
+}
+
+/**
+ * @param {Player} player
+ */
+export async function inventory(player) {
+    const original_status_bar = render_status_bar;
+    /** @type {PromiseWithResolvers<void>} */
+    const { promise, resolve } = Promise.withResolvers();
+    /**
+     * @param {KeyboardEvent} e
+     */
+    function handler(e) {
+        if (e.key === 'e') {
+            Game.current.resume();
+            resolve();
+        }
+    }
+    addEventListener('keydown', handler);
+    /**
+     * @param {MouseEvent} e
+     */
+    function mouse_handler(e) {
+        const { mouse_x, mouse_y } = renderer;
+        renderer.batch(() => {
+            renderer.ctx.fillStyle = 'blue';
+            renderer.circle(mouse_x, mouse_y, 50);
+        });
+    }
+    addEventListener('click', mouse_handler);
+    await renderer.batch_async(async () => {
+        renderer.ctx.save();
+        renderer.ctx.strokeStyle = 'transparent';
+        renderer.ctx.fillStyle = '#848391';
+        renderer.ctx.roundRect(renderer.width * 0.435, renderer.height * 0.1, renderer.width * 0.425, renderer.height * 0.5, 15);
+        renderer.ctx.fill();
+        renderer.ctx.stroke();
+        renderer.ctx.lineWidth = 1.5;
+        renderer.ctx.strokeStyle = '#260048';
+        let inventory_index = -1;
+        for (let y = renderer.height * 0.125; y < renderer.height * 0.475; y += renderer.width * 0.025) {
+            for (let x = renderer.width * 0.45; x < renderer.width * 0.85; x += renderer.width * 0.025) {
+                renderer.ctx.roundRect(x, y, renderer.width * 0.02, renderer.width * 0.02, 5);
+                renderer.ctx.stroke();
+                if (player.inventory[++inventory_index]) {
+                    await player.inventory[inventory_index].assets[0].promise;
+                    renderer.ctx.drawImage(player.inventory[inventory_index].assets[0].image, x, y, renderer.width * 0.02, renderer.width * 0.02);
+                }
+            }
+        }
+        for (let x = renderer.width * 0.45; x < renderer.width * 0.85; x += renderer.width * 0.025) {
+            renderer.ctx.roundRect(x, renderer.height * 0.525, renderer.width * 0.02, renderer.width * 0.02, 5);
+            renderer.ctx.stroke();
+            if (player.inventory[++inventory_index]) {
+                await player.inventory[inventory_index].assets[0].promise;
+                renderer.ctx.drawImage(player.inventory[inventory_index].assets[0].image, x, renderer.height * 0.1, renderer.width * 0.02, renderer.width * 0.02);
+            }
+        }
+        renderer.ctx.restore();
+    });
+    Game.current.pause();
+    return promise;
 }

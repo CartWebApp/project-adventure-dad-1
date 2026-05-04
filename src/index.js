@@ -1,7 +1,7 @@
 // @ts-check
 import { TIME_SLOWDOWN } from './constants.js';
 import { RaytracingRenderer } from './raytracing.js';
-import { interpolate, pixelator } from './utils.js';
+import { interpolate, pixelator, sleep } from './utils.js';
 import './images.js';
 import { Game } from './game.js';
 const canvas = /** @type {HTMLCanvasElement} */ (
@@ -15,7 +15,7 @@ canvas.addEventListener('click', () => {
     canvas.requestPointerLock();
 });
 const display = document.createElement('canvas');
-document.body.appendChild(display);
+document.body.firstElementChild?.appendChild(display);
 display.height = window.innerHeight / 2;
 display.width = window.innerWidth / 2;
 window.addEventListener('resize', () => {
@@ -39,6 +39,9 @@ const game = new Game(renderer);
 async function loop() {
     if (game.current_step === null) {
         return;
+    }
+    while (game.paused) {
+        await sleep(10);
     }
     await game.update();
     return requestAnimationFrame(loop);
