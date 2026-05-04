@@ -879,17 +879,6 @@ const spells = [
         })
         .build(),
     new SpellBuilder()
-        .with_name('Raise Dead')
-        .with_cast('battle')
-        .with_effect({ type: 'summon' })
-        .with_params_by_rarity({
-            rare: { count: 2 },
-            epic: { count: 6 },
-            legendary: { count: 8 }
-        })
-        .with_mana_cost_by_rarity({ rare: 30, epic: 45, legendary: 60 })
-        .build(),
-    new SpellBuilder()
         .with_name('Cleanse')
         .with_cast('anywhere')
         .with_effect({ type: 'clearEffects' })
