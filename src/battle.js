@@ -125,6 +125,7 @@ function applyEffect(target, effect) {
  * Process active effects for one tick (1 second)
  * @param {Player | Enemy} actor
  */
+
 async function processEffects(actor) {
     if (!actor.effects || actor.effects.length === 0) return;
     const remaining = [];
@@ -164,6 +165,7 @@ async function processEffects(actor) {
  * @param {Enemy} enemy
  * @param {Player} player
  */
+
 async function enemyAct(enemy, player) {
     // skip dead
     if (enemy.health <= 0) return;
