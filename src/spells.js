@@ -11,7 +11,6 @@ export const SPELLS = {
     'Curse of the Plague': [2, 4, 6, 3],
 
     'Blessing of Life': [1, 4, 2, 5, 3, 4, 2],
-    'Raise Dead': [2, 4, 6, 4, 1, 2],
     Earthquake: [1, 2, 1, 2, 3, 2, 1],
 
     Godlike: [1, 4, 2, 5, 3, 6, 2, 1],

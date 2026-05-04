@@ -485,7 +485,6 @@ async function playerCast(player, enemy, enemies, spellName) {
             );
             // For now heal instantly but record cast time in log
             p.health = p.max_life;
-            p.health = p.health;
             const castTimeHuman = Math.round(castTimeTicks / TICKS_PER_SEC);
             await dialog(
                 `${spellName} restores you to full health (cast time ${castTimeHuman}s).`
@@ -512,10 +511,9 @@ async function playerCast(player, enemy, enemies, spellName) {
             const cost = resolveManaCost(def, p) || 0;
             if (!(await spendMana(cost))) return;
             const percent = resolveParam(def, p, 'percent', 0.2);
-            const curr = p.health ?? p.health;
+            const curr = p.health;
             const sacrifice = Math.max(1, Math.round(curr * percent));
             p.health = Math.max(1, curr - sacrifice);
-            p.health = p.health;
             let total = 0;
             for (const e of aliveEnemies) {
                 const share = Math.max(
@@ -584,19 +582,6 @@ async function playerCast(player, enemy, enemies, spellName) {
             }
             await dialog(
                 `${spellName} strikes ${strikes} times over ${durationMinutes}m for ${total} total damage.`
-            );
-        },
-
-        'raise dead': async () => {
-            const def = getSpellDef('raise dead');
-            const cost = resolveManaCost(def, p) || 45;
-            if (!(await spendMana(cost))) return;
-            const count = resolveParam(def, p, 'count', 2);
-            // For simplicity, heal a small amount per summoned ally
-            const heal = Math.min(player.max_life, 5 * count);
-            player.health = Math.min(player.max_life, player.health + heal);
-            await dialog(
-                `${spellName} summons ${count} undead and heals you for ${heal}.`
             );
         },
 
@@ -853,7 +838,6 @@ class Combat {
                             await spell?.cast();
                         }
                     }
-                    // Player action code goes here -------------------------------->
                 }
 
                 // enemies act
