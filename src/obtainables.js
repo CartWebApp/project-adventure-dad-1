@@ -1,7 +1,7 @@
+/** @import { RaytracingRenderer } from './raytracing.js' */
 import { BaseBuilder, effects } from './combat.js';
 import { damageReduction, combatTimer } from './character.js';
 import { stamina_regen } from './character.js';
-import { DEV } from './env.js';
 import { asset } from './utils.js';
 
 /**
@@ -90,6 +90,10 @@ function getAttributeKeys(rarity) {
     return [];
 }
 
+/**
+ * @param {string} attr
+ * @returns {'common' | 'rare' | 'epic' | 'legendary'}
+ */
 function rarityForAttribute(attr) {
     for (let i = 0; i < RARITY_ORDER.length; i++) {
         const r = RARITY_ORDER[i];
@@ -114,6 +118,10 @@ function randInt(max) {
     return Math.floor(Math.random() * max);
 }
 
+/**
+ * @param {'common' | 'rare' | 'epic' | 'legendary'} rarity
+ * @param {number} [n]
+ */
 function pickRandomAttributes(rarity, n = 1) {
     const pool = getAttributeKeys(rarity);
     const out = [];
@@ -152,7 +160,7 @@ const armorTemplates = [
 // Determine how many attributes to attach by rarity (kept inline if needed later)
 
 /**
- * @param {string} rarity
+ * @param {'common' | 'rare' | 'epic' | 'legendary'} rarity
  * @returns {Array<{ material: string, type: string, defense: number, effects: string[], cost: number }>}
  */
 function buildArmorForRarity(rarity) {
@@ -344,7 +352,7 @@ class Potion {
     }
 }
 
-class PotionBuilder extends BaseBuilder {
+class PotionBuilder extends /** @type {typeof BaseBuilder<{ [K in keyof Potion]: Potion[K] }, Potion>} */ (BaseBuilder) {
     constructor() {
         super(data => new Potion(data), 'name', 'effect', 'costs');
     }
@@ -360,8 +368,10 @@ class Item {
     uses;
     edible_uses;
     value;
+    /** @type {string[]} */
+    assets = [];
     /**
-     * @param {{ name: string; description?: string; throwable?: boolean; uses?: number; edible_uses?: number; value?: number }} options
+     * @param {{ name: string; description?: string; throwable?: boolean; uses?: number; edible_uses?: number; value?: number; assets?: string[] }} options
      */
     constructor({
         name,
@@ -369,7 +379,8 @@ class Item {
         throwable = false,
         uses = 1,
         edible_uses = 0,
-        value = 0
+        value = 0,
+        assets = []
     }) {
         this.name = name;
         this.description = description;
@@ -377,10 +388,11 @@ class Item {
         this.uses = uses;
         this.edible_uses = edible_uses;
         this.value = value;
+        this.assets = assets;
     }
 }
 
-class ItemBuilder extends BaseBuilder {
+class ItemBuilder extends /** @type {typeof BaseBuilder<{ [K in keyof Item]: Item[K] }, Item>} */ (BaseBuilder) {
     constructor() {
         super(
             data => new Item(data),
@@ -406,26 +418,45 @@ class Weapon {
     }
 }
 
-class WeaponBuilder extends BaseBuilder {
+class WeaponBuilder extends /** @type {typeof BaseBuilder<{ [K in keyof Weapon]: Weapon[K] }, Weapon>} */ (BaseBuilder) {
     constructor() {
         super(data => new Weapon(data), 'name', 'general', 'stats_by_rarity');
     }
 }
 
 export class Spell {
+    /** @type {string} */
     name;
     cast;
     effect;
+    /** @type {Partial<Record<'common' | 'rare' | 'epic' | 'legendary', any>>} */
     mana_cost_by_rarity;
-    constructor({ name, cast = '', effect = {}, mana_cost_by_rarity = {} }) {
+    /** @type {Partial<Record<'common' | 'rare' | 'epic' | 'legendary', any>>} */
+    params_by_rarity;
+    /** @type {(renderer: RaytracingRenderer, step: number) => void} */
+    render_effect = () => {};
+    constructor({
+        name,
+        cast = '',
+        effect = {},
+        mana_cost_by_rarity = {},
+        params_by_rarity = {},
+        render_effect = () => {}
+    }) {
         this.name = name;
         this.cast = cast;
         this.effect = effect;
         this.mana_cost_by_rarity = mana_cost_by_rarity;
+        this.params_by_rarity = params_by_rarity;
+        this.render_effect = render_effect;
     }
 }
 
-class SpellBuilder extends BaseBuilder {
+class SpellBuilder
+    extends /** @type {(typeof BaseBuilder<{ [K in keyof Spell]: Spell[K] }, Spell>)} */ (
+        BaseBuilder
+    )
+{
     constructor() {
         super(
             data => {
@@ -438,7 +469,8 @@ class SpellBuilder extends BaseBuilder {
             'mana_cost_by_rarity',
             'cast',
             'effect',
-            'params_by_rarity'
+            'params_by_rarity',
+            'render_effect'
         );
     }
 }

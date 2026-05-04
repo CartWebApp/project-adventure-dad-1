@@ -1,6 +1,5 @@
 // @ts-check
 import { CHARACTER_CHOICES, ORIENTATIONS } from './constants.js';
-import { DEV } from './env.js';
 import { Animation, Image } from './objects.js';
 import { Spell } from './obtainables.js';
 import { asset } from './utils.js';
@@ -66,7 +65,7 @@ class Player {
         this.health_regen = 5;
         this.luck = 0;
         this.block_chance = 0;
-        // Whole number converts to precent (50 -> 50% or 0.5)
+        // Whole number converts to percent (50 -> 50% or 0.5)
         this.damage_reduction = 0;
         this.combat_timer = 100;
         this.extra_lives = 0;
@@ -92,24 +91,35 @@ class Player {
         this.cast_animation = new Animation(
             ...Array(this.character === CHARACTER_CHOICES.SLAVE ? 7 : 8)
                 .fill(0)
-                .map(
-                    (_, index) =>
-                        asset(`${
+                .map((_, index) =>
+                    asset(
+                        `${
                             this.character === CHARACTER_CHOICES.BEGGAR
                                 ? 'beggar'
                                 : this.character === CHARACTER_CHOICES.SLAVE
                                   ? 'slave'
                                   : 'knight'
-                        }/cast/${index + 1}.png`)
+                        }/cast/${index + 1}.png`
+                    )
                 )
-                .map(name => new Image(name, { width: 92, height: 92, scale: 5 }))
+                .map(
+                    name => new Image(name, { width: 92, height: 92, scale: 7 })
+                )
         );
     }
 
     toJSON() {
-        const { equip, applyAttributes, get_entity,
-            cast_animation, ...props } = this;
-        return props;
+        // object destructuring omits properties that aren't enumerable
+        // and since accessors aren't enumerable by default, we must specify `health`
+        const {
+            equip,
+            applyAttributes,
+            get_entity,
+            cast_animation,
+            health,
+            ...props
+        } = this;
+        return { ...props, health };
     }
 
     /**
@@ -118,13 +128,15 @@ class Player {
      */
     get_entity(orientation, scale) {
         return new Image(
-            asset(`${
-                this.character === CHARACTER_CHOICES.BEGGAR
-                    ? 'beggar'
-                    : this.character === CHARACTER_CHOICES.SLAVE
-                      ? 'slave'
-                      : 'knight'
-            }/${orientation}.png`),
+            asset(
+                `${
+                    this.character === CHARACTER_CHOICES.BEGGAR
+                        ? 'beggar'
+                        : this.character === CHARACTER_CHOICES.SLAVE
+                          ? 'slave'
+                          : 'knight'
+                }/${orientation}.png`
+            ),
             { scale }
         );
     }

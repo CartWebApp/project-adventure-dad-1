@@ -293,12 +293,10 @@ export class Image extends Entity {
     outline = [];
     /** @type {InstanceType<typeof globalThis['Image']>} */
     image;
-    canvas;
     width;
     height;
     scale;
     promise;
-    image_data;
 
     /**
      * @param {string} image
@@ -308,9 +306,6 @@ export class Image extends Entity {
         this.scale = scale;
         this.width = width;
         this.height = height;
-        this.canvas = document.createElement('canvas');
-        this.canvas.width = width;
-        this.canvas.height = height;
         if (Image.cache.has(image)) {
             const { image: cached, outline } =
                 /** @type {{ image: InstanceType<(typeof globalThis)['Image']>; outline: Map<number, Array<{ x: number; y: number }>> }} */ (
@@ -319,8 +314,6 @@ export class Image extends Entity {
             this.image = /** @type {HTMLImageElement} */ (
                 cached.cloneNode(true)
             );
-            this.image.width *= scale;
-            this.image.height *= scale;
             this.outline = outline.has(scale)
                 ? /** @type {Array<{ x: number; y: number }>} */ (
                       outline.get(scale)
@@ -337,8 +330,6 @@ export class Image extends Entity {
         this.image.addEventListener(
             'load',
             () => {
-                const ctx = this.canvas.getContext('2d', { willReadFrequently: true });
-                ctx?.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
                 const cloned = /** @type {HTMLImageElement} */ (
                     this.image.cloneNode(true)
                 );
@@ -348,7 +339,6 @@ export class Image extends Entity {
                     image: cloned,
                     outline: new Map([[scale, this.outline]])
                 });
-                this.image_data = ctx?.getImageData(0, 0, this.canvas.width, this.canvas.height);
                 resolve();
             },
             { once: true }
@@ -362,8 +352,6 @@ export class Image extends Entity {
      */
     async render(renderer, x, y) {
         await this.promise;
-        // renderer.ctx.scale(this.scale, this.scale);
-        // renderer.ctx.putImageData(this.image_data, x, y, 0, 0, this.image.width * this.scale, this.image.height * this.scale);
         renderer.ctx.drawImage(
             this.image,
             x,
@@ -376,34 +364,89 @@ export class Image extends Entity {
  
 export class Animation extends Entity {
     /** @type {Entity[]} */
-    entities = [];
-    state = 0;
+    frames = [];
+    #state = 0;
+    length = 0;
     layer = 4;
 
     /**
-     * @param {Entity[]} entities
+     * @param {Entity[]} frames
      */
-    constructor(...entities) {
+    constructor(...frames) {
         super();
-        this.entities = entities;
+        this.frames = frames;
+        this.length = this.frames.length - 1;
     }
 
-    // @ts-expect-error
-    get outline() {
-        return this.entities[this.state].outline;
+    get state() {
+        return this.#state;
+    }
+
+    reset() {
+        this.#state = 0;
+        this.outline = this.frames[this.#state].outline;
     }
 
     next() {
-        this.state = this.state === this.entities.length - 1 ? 0 : this.state + 1;
-        return this.state;
+        this.#state = this.#state === this.length ? 0 : this.#state + 1;
+        this.outline = this.frames[this.#state].outline;
+        return this.#state;
+    }
+
+    prev() {
+        this.#state = this.#state === 0 ? this.length : this.#state - 1;
+        this.outline = this.frames[this.#state].outline;
+        return this.#state;
     }
 
     /**
-     * @param {Renderer} renderer
+     * @param {RaytracingRenderer} renderer
      * @param {number} x
      * @param {number} y
      */
     async render(renderer, x, y) {
-        this.entities[this.state].render(renderer, x, y);
+        await this.frames[this.#state].render(renderer, x, y);
+    }
+}
+
+export class Polygon extends Entity {
+    layer = 4;
+    /** @type {(renderer: RaytracingRenderer) => void} */
+    prelude = () => {};
+
+    /**
+     * @param {Array<{ x: number; y: number }>} points
+     */
+    constructor(...points) {
+        super();
+        this.outline = points;
+    }
+
+    /**
+     * @param {(renderer: RaytracingRenderer) => void} prelude
+     */
+    with_prelude(prelude) {
+        this.prelude = prelude;
+        return this;
+    }
+
+    /**
+     * @param {RaytracingRenderer} renderer
+     * @param {number} x
+     * @param {number} y
+     */
+    async render(renderer, x, y) {
+        console.log(this);
+        this.prelude(renderer);
+        renderer.polygon(...this.outline.map(point => ({ x: point.x + x, y: point.y + y })));
+    }
+}
+
+export class Circle extends Polygon {
+    /**
+     * @param {number} radius
+     */
+    constructor(radius, step = 10) {
+        super(...circle(radius, step));
     }
 }

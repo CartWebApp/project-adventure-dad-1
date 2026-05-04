@@ -32,7 +32,11 @@ export class Entity {
      * @param {number} x
      * @param {number} y
      */
-    async render(renderer, x, y) {}
+    async render(renderer, x, y) {
+        renderer;
+        x;
+        y;
+    }
 }
 
 /**
@@ -206,33 +210,26 @@ export class RaytracingRenderer extends Renderer.Offscreen {
     promise = Promise.resolve();
 
     /**
-     * @param {() => void} fn
+     * @param {() => (Promise<void> | void)} fn
      */
-    batch(fn) {
-        this.#queued_render = true;
-        this.ctx.save();
-        fn();
-        this.ctx.restore();
-        this.#render();
-    }
-
-    /**
-     * @param {() => Promise<void>} fn
-     */
-    // @ts-expect-error
-    async batch_async(fn) {
+    async batch(fn) {
+        await this.promise;
+        /** @type {PromiseWithResolvers<void>} */
+        const { promise, resolve } = Promise.withResolvers();
+        this.promise = promise;
         this.#queued_render = true;
         this.ctx.save();
         await fn();
         this.ctx.restore();
         await this.#render();
+        resolve();
     }
 
     #queue_render() {
         if (this.#queued_render) {
             return;
         }
-        let { resolve, promise } = /** @type {PromiseWithResolvers<void>} */ (
+        const { resolve, promise } = /** @type {PromiseWithResolvers<void>} */ (
             Promise.withResolvers()
         );
         this.promise = promise;
@@ -247,7 +244,8 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         const entities = [...this.#entities].toSorted(
             (a, b) => a.entity.layer - b.entity.layer
         );
-        await new Promise(resolve => requestAnimationFrame(resolve));
+        // await request_animation_frame();
+        // await new Promise(resolve => requestAnimationFrame(resolve));
         this.#entities.length = 0;
         [this.#hidden_frame.style.zIndex, this.#current_frame.style.zIndex] = [
             this.#current_frame.style.zIndex,
@@ -280,6 +278,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                                 this.precision
                             )
                         );
+                    // console.log(e, this.#is_on_screen(e));
                     if (this.#is_on_screen(e)) {
                         await entity.render(this, x, y);
                     }
@@ -328,26 +327,23 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         } catch (err) {
             console.log(err);
         }
-        await new Promise(resolve => requestAnimationFrame(resolve));
-        requestAnimationFrame(() => {
-            [
-                this.#hidden_frame.style.zIndex,
-                this.#current_frame.style.zIndex
-            ] = [
-                this.#current_frame.style.zIndex,
-                this.#hidden_frame.style.zIndex
-            ];
-            [this.#current_ctx, this.#hidden_ctx] = [
-                this.#hidden_ctx,
-                this.#current_ctx
-            ];
-            [this.#current_frame, this.#hidden_frame] = [
-                this.#hidden_frame,
-                this.#current_frame
-            ];
-            this.display = this.#hidden_frame;
-            this.display_ctx = this.#hidden_ctx;
-        });
+        // await request_animation_frame();
+        // requestAnimationFrame(() => {
+        [this.#hidden_frame.style.zIndex, this.#current_frame.style.zIndex] = [
+            this.#current_frame.style.zIndex,
+            this.#hidden_frame.style.zIndex
+        ];
+        [this.#current_ctx, this.#hidden_ctx] = [
+            this.#hidden_ctx,
+            this.#current_ctx
+        ];
+        [this.#current_frame, this.#hidden_frame] = [
+            this.#hidden_frame,
+            this.#current_frame
+        ];
+        this.display = this.#hidden_frame;
+        this.display_ctx = this.#hidden_ctx;
+        // });
     }
 
     /**
@@ -453,19 +449,15 @@ export class RaytracingRenderer extends Renderer.Offscreen {
             }
             if (+lighting.level.toFixed(2) === 0) {
                 shading = true;
-                // this.ctx.strokeStyle = gradient;
-                // this.ctx.stroke(path);
+                this.ctx.strokeStyle = gradient;
+                this.ctx.stroke(path);
                 continue;
-                // break;
             }
             lighting.level *= this.#light_dissipation.get(this.precision);
-            // lighting.level -= (lighting.level * Math.hypot(this.width, this.height));
-            // if (!shading) {
             gradient.addColorStop(
                 points.indexOf(point) / (points.length - 1),
                 this.#serialize_color(...lighting.hue, lighting.level)
             );
-            // console.log(parent_entity, lit_entity);
             if (!shading) {
                 path.lineTo(x, y);
                 if (
@@ -547,7 +539,6 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                     entity !== lit_entity &&
                     entity.entity !== parent_entity
                 ) {
-                    // console.log(entity);
                     shadow_path.moveTo(x, y);
                     shadow_path.rect(x, y, 5, 5);
                     // shadow_path.lineTo(x, y);
@@ -557,15 +548,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                 }
                 continue;
             }
-            // }
         }
-        // if (this.#last_points === null || this.#last_points.length - 1 < light_index) {
-        //     this.#current_path.lineTo(points[light_index].x, points[light_index].y);
-        // } else {
-        //     // const [midpoint] = points_between(this.#last_points[light_index], points[light_index]);
-        //     this.#current_path.lineTo(points[light_index].x, points[light_index].y);
-        //     // this.#current_path.arcTo(midpoint.x, midpoint.y, points[light_index].x, points[light_index].y, 5);
-        // }
         const last_points = points.slice(0, light_index);
         const last_point_on_screen = last_points.findLastIndex(
             value =>
@@ -604,7 +587,6 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         this.#last_points = last_points.slice(0, last_point_on_screen);
         this.#prev_last_lighting_level = this.#last_lighting_level;
         this.#last_lighting_level = level.slice(0, last_point_on_screen);
-        // this.#edges.push(points[last_point_on_screen]);
     }
 
     /**
