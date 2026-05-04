@@ -1,6 +1,8 @@
-import { VERY_LOW_HEALTH } from './constants.js';
 import { Renderer } from './renderer.js';
-import { interpolate, InterpolatingDoubleTreeMap, pixelator } from './utils.js';
+import {
+    InterpolatingDoubleTreeMap,
+    sleep
+} from './utils.js';
 
 const ui_canvas = /** @type {HTMLCanvasElement} */ (
     document.querySelector('canvas.ui')
@@ -19,21 +21,6 @@ window.addEventListener('resize', () => {
     display.width = window.innerWidth / 2;
 });
 
-/**
- * @template {any[]} I
- * @template O
- * @param {[...(() => void)[], (...args: I) => O]} fns
- * @returns {(...args: NoInfer<I>) => NoInfer<O>}
- */
-function join(...fns) {
-    return (...args) => {
-        for (let i = 0; i < fns.length - 1; i++) {
-            fns[i]();
-        }
-        return /** @type {(...args: I) => O} */ (fns[fns.length - 1])(...args);
-    };
-}
-
 const renderer = new Renderer.Offscreen(
     ui_canvas,
     display,
@@ -45,43 +32,8 @@ renderer.ctx.font = '22px monospace, Noto Color Emoji';
 display.addEventListener('click', () => {
     display.requestPointerLock();
 });
-// /**
-//  * @param {string} text
-//  */
-// export async function dialog(text) {
-//     for (let i = 0; i < text.length + 1; i++) {
-//         static_dialog(text.slice(0, i));
-//         await new Promise(resolve => setTimeout(resolve, 50));
-//     }
-// }
+
 let render_status_bar = () => {};
-function cursor() {
-    renderer.ctx.save();
-    renderer.ctx.fillStyle = 'white';
-    renderer.ctx.strokeStyle = 'white';
-    renderer.ctx.lineWidth = 6;
-    const { mouse_x: x, mouse_y: y } = renderer;
-    renderer.polygon(
-        {
-            x: x - 6,
-            y: y - 10
-        },
-        {
-            x: x - 6,
-            y: y + 8
-        },
-        {
-            x: x,
-            y: y + 4
-        },
-        {
-            x: x + 4,
-            y: y + 5
-        }
-    );
-    renderer.ctx.restore();
-    render_status_bar();
-}
 
 let locked = false;
 
@@ -131,23 +83,6 @@ export function select(text, choices, render_icon = () => {}) {
     const { promise, resolve } = Promise.withResolvers();
     let current_choice = 0;
     let resolved = false;
-    addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
-            resolve(choices[current_choice]);
-            resolved = true;
-            locked = false;
-        } else if (e.key === 'ArrowUp') {
-            current_choice--;
-            if (current_choice < 0) {
-                current_choice = choices.length - 1;
-            }
-        } else if (e.key === 'ArrowDown') {
-            current_choice++;
-            if (current_choice >= choices.length) {
-                current_choice = 0;
-            }
-        }
-    });
     let init = true;
     let tick = 0;
     const lines = split_lines(text);
@@ -160,19 +95,20 @@ export function select(text, choices, render_icon = () => {}) {
         renderer.ctx.font = '22px monospace, Noto Color Emoji';
         await renderer.batch_async(async () => {
             renderer.clear();
-            renderer.ctx.strokeStyle = 'white';
-            renderer.ctx.lineWidth = 2;
-            renderer.ctx.fillStyle = 'black';
-            renderer.ctx.roundRect(
-                renderer.width * 0.4,
-                renderer.height * 0.6 - (height - renderer.height * 0.2),
-                renderer.width * 0.5,
-                height,
-                15
-            );
-            renderer.ctx.fill();
-            // renderer.rect(renderer.width * 0.05, renderer.height * 0.5, renderer.width * 0.9, renderer.height * 0.18);
-            renderer.ctx.stroke();
+            if (!init) {
+                renderer.ctx.strokeStyle = 'white';
+                renderer.ctx.lineWidth = 2;
+                renderer.ctx.fillStyle = 'black';
+                renderer.ctx.roundRect(
+                    renderer.width * 0.4,
+                    renderer.height * 0.6 - (height - renderer.height * 0.2),
+                    renderer.width * 0.5,
+                    height,
+                    15
+                );
+                renderer.ctx.fill();
+                renderer.ctx.stroke();
+            }
             renderer.ctx.save();
             render_icon(
                 renderer,
@@ -205,7 +141,7 @@ export function select(text, choices, render_icon = () => {}) {
                     renderer.batch(() => {
                         render_frame(rendered, render_icon);
                     });
-                    await new Promise(resolve => setTimeout(resolve, 75));
+                    await sleep(75);
                 }
                 init = false;
                 y += 22 * lines.length;
@@ -258,6 +194,23 @@ export function select(text, choices, render_icon = () => {}) {
         return requestAnimationFrame(render);
     }
     requestAnimationFrame(render);
+    addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            resolve(choices[current_choice]);
+            resolved = true;
+            locked = false;
+        } else if (e.key === 'ArrowUp') {
+            current_choice--;
+            if (current_choice < 0) {
+                current_choice = choices.length - 1;
+            }
+        } else if (e.key === 'ArrowDown') {
+            current_choice++;
+            if (current_choice >= choices.length) {
+                current_choice = 0;
+            }
+        }
+    });
     return promise;
 }
 
@@ -310,19 +263,19 @@ export async function dialog(
     const { promise, resolve } = Promise.withResolvers();
     await renderer.batch_async(async () => {
         renderer.clear();
-        renderer.ctx.strokeStyle = 'white';
-        renderer.ctx.lineWidth = 2;
-        renderer.ctx.fillStyle = 'black';
-        renderer.ctx.roundRect(
-            renderer.width * 0.4,
-            renderer.height * 0.6,
-            renderer.width * 0.5,
-            renderer.height * 0.2,
-            15
-        );
-        renderer.ctx.fill();
+        // renderer.ctx.strokeStyle = 'white';
+        // renderer.ctx.lineWidth = 2;
+        // renderer.ctx.fillStyle = 'black';
+        // renderer.ctx.roundRect(
+        //     renderer.width * 0.4,
+        //     renderer.height * 0.6,
+        //     renderer.width * 0.5,
+        //     renderer.height * 0.2,
+        //     15
+        // );
+        // renderer.ctx.fill();
         // renderer.rect(renderer.width * 0.05, renderer.height * 0.5, renderer.width * 0.9, renderer.height * 0.18);
-        renderer.ctx.stroke();
+        // renderer.ctx.stroke();
         renderer.ctx.save();
         render_icon(renderer, renderer.width * 0.415, renderer.height * 0.7);
         renderer.ctx.restore();
@@ -506,7 +459,7 @@ export async function input(
                     renderer.batch(() => {
                         render_frame(rendered, () => {});
                     });
-                    await new Promise(resolve => setTimeout(resolve, 75));
+                    await sleep(75);
                 }
                 init = false;
             }
@@ -550,9 +503,9 @@ export async function input(
 const health_color_r = new InterpolatingDoubleTreeMap();
 const health_color_g = new InterpolatingDoubleTreeMap();
 const health_color_b = new InterpolatingDoubleTreeMap();
-health_color_r.set(0.25, 0xff);
-health_color_g.set(0.25, 0x33);
-health_color_b.set(0.25, 0x33);
+health_color_r.set(0, 0xff);
+health_color_g.set(0, 0x33);
+health_color_b.set(0, 0x33);
 health_color_r.set(0.5, 0xcc);
 health_color_g.set(0.5, 0x77);
 health_color_b.set(0.5, 0x22);
@@ -562,7 +515,7 @@ health_color_b.set(0.75, 0x33);
 health_color_r.set(1, 0x55);
 health_color_g.set(1, 0xff);
 health_color_b.set(1, 0x55);
-let last_health = 1;
+
 /**
  * @param {number} amount
  */

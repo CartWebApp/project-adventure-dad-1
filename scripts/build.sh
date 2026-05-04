@@ -1,4 +1,3 @@
-pnpm install # netlify might do this for us, not sure...
 node ./scripts/image-loader.js
 mkdir -p ./dist
 cp -a -r ./src/* ./dist

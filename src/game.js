@@ -27,18 +27,6 @@ class States {
     }
 }
 
-class Battle {
-    opponents = [];
-}
-
-class Trade {
-    offers = [];
-}
-
-class Dialogue {
-    previous = [];
-}
-
 export class Game {
     /** @type {Game} */
     static current;
@@ -49,7 +37,7 @@ export class Game {
     player;
     /**
      * Optional holder for the last combat result produced by `BattleEncounter`.
-     * @type {{ won?: boolean, details?: any; difficulty: (typeof DIFFICULTY)[keyof typeof DIFFICULTY] } | undefined}
+     * @type {{ won?: boolean, difficulty: (typeof DIFFICULTY)[keyof typeof DIFFICULTY] } | undefined}
      */
     last_combat_result;
     /** @type {Step | null} */

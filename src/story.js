@@ -1,6 +1,6 @@
 import { Player } from './character.js';
 import { Entity } from './combat.js';
-import { CHARACTER_CHOICES, STATES, TIME_SLOWDOWN } from './constants.js';
+import { CHARACTER_CHOICES, STATES } from './constants.js';
 import { Game } from './game.js';
 // import { Ground, Knight, Moon, Sun, Tree } from './objects.js';
 import { Renderer } from './renderer.js';
@@ -10,14 +10,8 @@ import {
     DIFFICULTY,
     pickEnemiesForDifficulty
 } from './battle.js';
-import {
-    items,
-    spells,
-    weapons,
-    potions,
-    getArmorForRarity
-} from './obtainables.js';
-import { interpolate } from './utils.js';
+import { items, spells, potions, getArmorForRarity } from './obtainables.js';
+import { interpolate, sleep } from './utils.js';
 
 /**
  * Base class for story building purposes.
@@ -53,7 +47,9 @@ export class Step {
     /**
      * @param {Game} game
      */
-    async execute(game) {}
+    async execute(game) {
+        game;
+    }
     /**
      * @param {(typeof STATES)[keyof typeof STATES]} state
      */
@@ -786,7 +782,7 @@ export const story = new Parallel(
                         );
                     }
                     renderer.background(gradient);
-                    await new Promise(resolve => setTimeout(resolve, 125));
+                    await sleep(125);
                 }
             }),
             new Dialog(
@@ -818,7 +814,7 @@ export const story = new Parallel(
                 game.time++;
                 game.renderer.refresh();
 
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await sleep(100);
             })
         )
     );

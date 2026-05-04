@@ -42,10 +42,11 @@ function inside(point, vertices) {
     // ray-casting algorithm based on
     // https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
 
-    let { x, y } = point;
+    const { x, y } = point;
 
     let inside = false;
-    for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+    const len = vertices.length;
+    for (let i = 0, j = len - 1; i < len; j = i++) {
         const { x: xi, y: yi } = vertices[i];
         const { x: xj, y: yj } = vertices[j];
 
@@ -61,7 +62,7 @@ function inside(point, vertices) {
  * @param {number} radius
  */
 export function circle(radius, step = 1) {
-    let center = {
+    const center = {
         x: radius,
         y: radius
     };
@@ -78,8 +79,35 @@ export function circle(radius, step = 1) {
     return points;
 }
 
+let total_time = 0;
+let frame_count = 0;
+
+/**
+ * A time-consistent `requestAnimationFrame`.
+ * Since `requestAnimationFrame` can be inconsistently timed,
+ * this provides a more consistent implementation based on `requestAnimationFrame`.
+ */
+export function request_animation_frame() {
+    const start = performance.now();
+    /** @type {Promise<void>} */
+    const frame = new Promise(resolve =>
+        requestAnimationFrame(() => {
+            frame_count++;
+            const frame_time = performance.now() - start;
+            total_time += frame_time;
+            resolve();
+        })
+    );
+    if (frame_count === 0) {
+        return frame;
+    }
+    const timer = sleep(total_time / frame_count);
+    return Promise.race([frame, timer]);
+}
+
 /**
  * @param {number} ms
+ * @returns {Promise<void>}
  */
 export function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -89,11 +117,11 @@ export function sleep(ms) {
  * @param {string} path
  */
 export function asset(path) {
-    path = path.startsWith('/') ? path : `/${path}`;
+    const slash = path.startsWith('/') ? '' : '/';
     if (DEV) {
-        return `../assets${path}`;
+        return `../assets${slash}${path}`;
     }
-    return `.${path}`;
+    return `.${slash}${path}`;
 }
 
 /**
@@ -126,6 +154,7 @@ export function interpolate(start, end, degree) {
 export class InterpolatingDoubleTreeMap {
     /** @type {Array<[number, number]>} */
     #entries = [];
+
     /**
      * @param {number} key
      * @param {number} value
@@ -177,23 +206,25 @@ export class InterpolatingDoubleTreeMap {
 export class InterpolatingEntityMap {
     /** @type {Array<{ x: number; y: number; entity: Entity }>} */
     #entities = [];
+
     /**
      * @param {{ x: number; y: number; entity: Entity }} entity
      */
     add(entity) {
         this.#entities.push(entity);
     }
+
     *entries() {
         for (const entity of this.#entities) {
             yield entity;
         }
     }
+
     /**
      * @param {number} x
      * @param {number} y
      */
     get(x, y) {
-        // console.log(this.#entities);
         const queried_x = x;
         const queried_y = y;
         const filtered = [];
@@ -207,12 +238,6 @@ export class InterpolatingEntityMap {
             if (!inside(queried, points)) {
                 continue;
             }
-            // if (points.every(point => (point.x > queried_x) || (point.x < queried_x) || (point.y > queried_y) || (point.y < queried_y))) {
-            //     continue;
-            // }
-            // if (points.every(point => (point.x > queried_x && point.y > queried_y) || (point.x < queried_x && point.y < queried_y))) {
-
-            // }
             filtered.push(e);
         }
         if (filtered.length === 0) {
@@ -233,6 +258,7 @@ export class InterpolatingEntityMap {
         }
         return highest;
     }
+
     clear() {
         this.#entities.length = 0;
     }

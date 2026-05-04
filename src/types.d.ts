@@ -12,3 +12,22 @@ export type EnemyBuilderData = {
     tertiary_attack: string | null;
     seed: number;
 }
+
+export interface Effect {
+    name: string;
+    type: string;
+    duration: number;
+    health_regen?: number;
+    damage_reduction?: number;
+    damage_per_tick?: number;
+    until_cured?: boolean;
+    tick_interval?: number;
+    remaining?: number;
+    accuracy_penalty_percent?: number;
+    disabled?: boolean;
+    immobilized?: boolean;
+    damage_taken_multiplier?: number;
+    always_hit?: boolean;
+    reduce_by_ticks?: number;
+    reduced_healing?: boolean;
+}

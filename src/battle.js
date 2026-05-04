@@ -1,22 +1,19 @@
-// battle.js
 // @ts-check
+/** @import { Effect } from './types.js' */
 import {
     BaseBuilder,
     enemies as ENEMY_POOL,
     effects as COMBAT_EFFECTS,
-    Entity,
     Enemy
 } from './combat.js';
 import { spells as SPELL_DEFINITIONS } from './obtainables.js';
 import { Player } from './character.js';
 import { TICKS_PER_SEC } from './combat.js';
-import { castSpell as correctSpellCast } from './spells.js';
 import { clear, dialog, input, select } from './ui.js';
 import { Game } from './game.js';
-import { ORIENTATIONS } from './constants.js';
-import { SPELLS } from './spells.js';
-import { sleep } from './utils.js';
-import { BattleGround } from './objects.js';
+import { asset, sleep } from './utils.js';
+import { BattleGround, Image } from './objects.js';
+import { RaytracingRenderer } from './raytracing.js';
 
 /** @type {{EASY:'easy', MEDIUM:'medium', HARD:'hard'}} */
 const DIFFICULTY = {
@@ -110,7 +107,7 @@ function applyDamage(target, dmg) {
 
 /**
  * @param {Player | Enemy} target
- * @param {Player | Enemy} effect
+ * @param {Effect} effect
  */
 function applyEffect(target, effect) {
     // copy effect with runtime fields
@@ -627,8 +624,10 @@ async function playerCast(player, enemy, enemies, spellName) {
     // find matching handler
     for (const key of Object.keys(handlers)) {
         if (name.includes(key.replace(/\(default\)/, '').trim())) {
-            await handlers[key]();
-            return;
+            return {
+                cast: handlers[key],
+                render: getSpellDef(key)?.render_effect
+            };
         }
     }
 
@@ -709,15 +708,21 @@ class Combat {
             const player = this.player;
             const game = Game.current;
             const cast_animation = player.cast_animation;
-            cast_animation.state = 0;
-            game.renderer.batch(() => {
+            cast_animation.reset();
+            await game.renderer.batch(() => {
                 game.renderer.clear();
                 game.renderer.entity(new BattleGround(), 0, 0);
                 game.renderer.entity(
-                    player.get_entity(ORIENTATIONS.NORTHEAST, 10),
-                    game.renderer.width * 0.1,
+                    new Image(asset('beggar/cast/1.png'), { scale: 7 }),
+                    game.renderer.width * 0.25,
                     game.renderer.height * 0.1
                 );
+                // game.renderer.entity(
+                //     cast_animation,
+                //     // player.get_entity(ORIENTATIONS.NORTHEAST, 10),
+                //     game.renderer.width * 0.1,
+                //     game.renderer.height * 0.1
+                // );
             });
             /** @type {Enemy[]} */
             const enemies = this.enemies || [];
@@ -735,14 +740,19 @@ class Combat {
                             enemy_names.filter(enemy => enemy === name).length
                         ])
                 );
-                const names = quantities.map(([name, quantity]) =>
-                    quantity === 1 ? name : `${quantity} ${name}s`
+                const has_multiple = quantities.some(
+                    ([_, quantity]) => quantity > 1
                 );
-                let res = /^[0-9]/.test(names[0]) ? '' : 'a';
-                if (/^[aeiou]/i.test(names[0])) {
+                const names = quantities.map(([name, quantity]) =>
+                    quantity === 1 && !has_multiple
+                        ? name
+                        : `${quantity === 1 ? (/^[aeiou]/i.test(name) ? 'an' : 'a') : quantity} ${name}${quantity > 1 ? 's' : ''}`
+                );
+                let res = /^[0-9]/.test(names[0]) || has_multiple ? '' : 'a';
+                if (/^[aeiou]/i.test(names[0]) && !has_multiple) {
                     res += 'n';
                 }
-                if (!/^[0-9]/.test(names[0])) {
+                if (!/^[0-9]/.test(names[0]) && !has_multiple) {
                     res += ' ';
                 }
                 const len = names.length;
@@ -757,9 +767,6 @@ class Combat {
                 return res;
             }
             await dialog(`You encounter ${stringify(enemy_names)}!`);
-            // await dialog(
-            //     `You encounter a${enemy_names[0].match(/^[aeiou]/i) ? 'n' : ''} ${enemy_names.length === 1 ? enemy_names[0] : enemy_names.map((name, index) => `${index === enemy_names.length - 1 ? ' and ' : ''}${name}${index < enemy_names.length - 2 ? ', ' : ''}`).join('')}!`
-            // );
             await sleep(1000);
             /** @type {string[]} */
             const log = [];
@@ -801,7 +808,7 @@ class Combat {
                         ) {
                             await playerMelee(player, target);
                         } else {
-                            await playerCast(
+                            const spell = await playerCast(
                                 player,
                                 target,
                                 enemies,
@@ -810,33 +817,38 @@ class Combat {
                                     SPELL_DEFINITIONS.map(spell => spell.name)
                                 )
                             );
-                            clear();
-                            while (cast_animation.next() !== 0) {
-                                game.renderer.batch(() => {
-                                    game.renderer.clear();
-                                    game.renderer.entity(
-                                        new BattleGround(),
-                                        0,
-                                        0
-                                    );
-                                    game.renderer.entity(
-                                        cast_animation,
-                                        game.renderer.width * 0.1,
-                                        game.renderer.height * 0.1
-                                    );
-                                });
-                                await sleep(200);
+                            /**
+                             * @param {{ cast(): Promise<void>; render_effect?(renderer: RaytracingRenderer, step: number): Promise<void> } | null | undefined} spell
+                             */
+                            async function animate(spell) {
+                                while (cast_animation.next() !== 0) {
+                                    await game.renderer.batch(async () => {
+                                        game.renderer.clear();
+                                        game.renderer.entity(
+                                            new BattleGround(),
+                                            0,
+                                            0
+                                        );
+                                        game.renderer.entity(
+                                            cast_animation,
+                                            game.renderer.width * 0.25,
+                                            game.renderer.height * 0.1
+                                        );
+                                        await spell?.render_effect?.(
+                                            game.renderer,
+                                            cast_animation.state /
+                                                cast_animation.length
+                                        );
+                                    });
+                                    await sleep(100);
+                                }
+                                await sleep(100);
                             }
-                            // await sleep(1000);
-                            // game.renderer.batch(() => {
-                            //     game.renderer.clear();
-                            //     game.renderer.entity(new BattleGround(), 0, 0);
-                            //     game.renderer.entity(
-                            //         player.get_entity(ORIENTATIONS.NORTHEAST, 10),
-                            //         game.renderer.width * 0.25,
-                            //         game.renderer.height * 0.1
-                            //     );
-                            // });
+                            await sleep(100);
+                            clear();
+                            await sleep(100);
+                            await animate(spell);
+                            await spell?.cast();
                         }
                     }
                     // Player action code goes here -------------------------------->
