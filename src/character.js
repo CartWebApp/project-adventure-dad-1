@@ -65,7 +65,7 @@ class Player {
         this.health_regen = 5;
         this.luck = 0;
         this.block_chance = 0;
-        // Whole number converts to precent (50 -> 50% or 0.5)
+        // Whole number converts to percent (50 -> 50% or 0.5)
         this.damage_reduction = 0;
         this.combat_timer = 100;
         this.extra_lives = 0;

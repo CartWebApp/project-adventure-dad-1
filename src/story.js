@@ -813,7 +813,7 @@ export const story = new Parallel(
             new Loop(async game => {
                 game.time++;
                 game.renderer.refresh();
-
+                game.save();
                 await sleep(100);
             })
         )

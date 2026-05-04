@@ -364,18 +364,18 @@ export class Image extends Entity {
  
 export class Animation extends Entity {
     /** @type {Entity[]} */
-    entities = [];
+    frames = [];
     #state = 0;
     length = 0;
     layer = 4;
 
     /**
-     * @param {Entity[]} entities
+     * @param {Entity[]} frames
      */
-    constructor(...entities) {
+    constructor(...frames) {
         super();
-        this.entities = entities;
-        this.length = this.entities.length - 1;
+        this.frames = frames;
+        this.length = this.frames.length - 1;
     }
 
     get state() {
@@ -384,12 +384,18 @@ export class Animation extends Entity {
 
     reset() {
         this.#state = 0;
-        this.outline = this.entities[this.#state].outline;
+        this.outline = this.frames[this.#state].outline;
     }
 
     next() {
         this.#state = this.#state === this.length ? 0 : this.#state + 1;
-        this.outline = this.entities[this.#state].outline;
+        this.outline = this.frames[this.#state].outline;
+        return this.#state;
+    }
+
+    prev() {
+        this.#state = this.#state === 0 ? this.length : this.#state - 1;
+        this.outline = this.frames[this.#state].outline;
         return this.#state;
     }
 
@@ -399,7 +405,7 @@ export class Animation extends Entity {
      * @param {number} y
      */
     async render(renderer, x, y) {
-        await this.entities[this.#state].render(renderer, x, y);
+        await this.frames[this.#state].render(renderer, x, y);
     }
 }
 
