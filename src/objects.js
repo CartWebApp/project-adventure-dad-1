@@ -268,7 +268,7 @@ function get_outline(image) {
     const min_x = Math.min(...reduced.map(({ x }) => x));
     const min_y = Math.min(...reduced.map(({ y }) => y));
     const aligned = reduced.map(({ x, y }) => ({ x: x - min_x, y: y - min_y }));
-    return aligned;
+    return reduced;
 }
 
 const resolved = Promise.resolve();

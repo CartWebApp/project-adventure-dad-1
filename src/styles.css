@@ -1,8 +1,6 @@
 canvas {
     width: 150dvw;
     height: 125dvh;
-    margin-left: -50vw;
-    margin-right: 50vw;
     image-rendering: pixelated;
     position: absolute;
     z-index: 1;
@@ -12,7 +10,12 @@ canvas.ui {
     z-index: 3;
 }
 
-body {
+body, main {
     overflow: hidden;
     margin: 0;
+}
+
+main {
+    margin-left: -50vw;
+    margin-right: 50vw;
 }

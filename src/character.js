@@ -1,7 +1,7 @@
 // @ts-check
 import { CHARACTER_CHOICES, ORIENTATIONS } from './constants.js';
 import { Animation, Image } from './objects.js';
-import { Spell } from './obtainables.js';
+import { Item, items, Spell } from './obtainables.js';
 import { asset } from './utils.js';
 export const damageReduction = 0;
 export const combatTimer = 100;
@@ -33,7 +33,7 @@ class Player {
     combat_timer;
     extra_lives;
     resistances;
-    /** @type {any[]} */
+    /** @type {Item[]} */
     inventory;
     /** @type {Spell[]} */
     spells;
@@ -79,7 +79,7 @@ class Player {
             rooted: 0,
             weakness: 0
         };
-        this.inventory = [];
+        this.inventory = [items[1]];
         this.spells = [];
         this.equipped = {
             weapon: null,
@@ -117,9 +117,10 @@ class Player {
             get_entity,
             cast_animation,
             health,
+            inventory,
             ...props
         } = this;
-        return { ...props, health };
+        return { ...props, health, inventory: inventory.map(item => item.name) };
     }
 
     /**

@@ -81,10 +81,12 @@ function pickEnemiesForDifficulty(difficulty) {
  * @param {number} baseDamage
  */
 function calculateDamage(_attacker, defender, baseDamage) {
+    defender.block_chance ||= 0;
     // block chance
     const block =
-        (defender.block_chance || 0) > 0 &&
-        Math.random() * 100 < (defender.block_chance || 0);
+        defender.block_chance > 0 &&
+        Math.random() * 100 < defender.block_chance;
+    console.log(block, defender.block_chance);
     if (block) return { final: 0, blocked: true };
 
     // damage reduction percent (flat percent)
@@ -733,7 +735,13 @@ class Combat {
                 const names = quantities.map(([name, quantity]) =>
                     quantity === 1 && !has_multiple
                         ? name
-                        : `${quantity === 1 ? (/^[aeiou]/i.test(name) ? 'an' : 'a') : quantity} ${name}${quantity > 1 ? 's' : ''}`
+                        : `${
+                              quantity === 1
+                                  ? /^[aeiou]/i.test(name)
+                                      ? 'an'
+                                      : 'a'
+                                  : quantity
+                          } ${name}${quantity > 1 ? 's' : ''}`
                 );
                 let res = /^[0-9]/.test(names[0]) || has_multiple ? '' : 'a';
                 if (/^[aeiou]/i.test(names[0]) && !has_multiple) {

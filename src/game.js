@@ -1,6 +1,7 @@
 import { DIFFICULTY } from './battle.js';
 import { Player } from './character.js';
 import { ORIENTATIONS } from './constants.js';
+import { items } from './obtainables.js';
 import { RaytracingRenderer } from './raytracing.js';
 import { Step, story } from './story.js';
 
@@ -47,6 +48,13 @@ export class Game {
     /** @type {number[]} */
     step_sequence = [];
     time = 140; // offset it a bit so it starts at daytime
+    paused = false;
+    pause() {
+        this.paused = true;
+    }
+    resume() {
+        this.paused = false;
+    }
     /**
      * @param {RaytracingRenderer} renderer
      */
@@ -123,6 +131,8 @@ export class Game {
         if (localStorage.game !== undefined) {
             const { player, steps, time } = JSON.parse(localStorage.game);
             this.time = time;
+            player.inventory = player.inventory.map((/** @type {string} */ name) => items.find(item => item.name === name));
+            console.log(player);
             this.player = Object.assign(new Player(player.name, player.character), player);
             this.step_sequence = steps;
             this.current_step = Step.goto(
