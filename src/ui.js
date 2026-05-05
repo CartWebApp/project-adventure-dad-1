@@ -1,10 +1,7 @@
 import { Player } from './character.js';
 import { Game } from './game.js';
 import { Renderer } from './renderer.js';
-import {
-    InterpolatingDoubleTreeMap,
-    sleep
-} from './utils.js';
+import { clamp, InterpolatingDoubleTreeMap, sleep } from './utils.js';
 
 const ui_canvas = /** @type {HTMLCanvasElement} */ (
     document.querySelector('canvas.ui')
@@ -23,20 +20,16 @@ window.addEventListener('resize', () => {
     display.width = window.innerWidth / 2;
 });
 
-const renderer = new Renderer.Offscreen(
-    ui_canvas,
-    display,
-    canvas => {
-        render_status_bar();
-        return canvas;
-    }
-);
+const renderer = new Renderer.Offscreen(ui_canvas, display, canvas => {
+    render_status_bar();
+    return canvas;
+});
 
 renderer.ctx.fillStyle = 'white';
 renderer.ctx.font = '22px monospace, Noto Color Emoji';
-display.addEventListener('click', () => {
-    display.requestPointerLock();
-});
+// display.addEventListener('click', () => {
+//     display.requestPointerLock();
+// });
 
 let render_status_bar = () => {};
 
@@ -566,11 +559,7 @@ export function health(amount) {
  * @param {() => void} fn
  */
 export function status_bar(fn) {
-    const first_time = render_status_bar.toString() === '() => {}'
     render_status_bar = fn;
-    if (first_time) {
-        inventory(Game.current.player);
-    }
 }
 
 function clear_nobatch() {
@@ -585,60 +574,191 @@ export function clear() {
  * @param {Player} player
  */
 export async function inventory(player) {
-    const original_status_bar = render_status_bar;
+    Game.current.pause();
+    let close = false;
     /** @type {PromiseWithResolvers<void>} */
     const { promise, resolve } = Promise.withResolvers();
     /**
      * @param {KeyboardEvent} e
      */
     function handler(e) {
-        if (e.key === 'e') {
-            Game.current.resume();
+        if (e.key === 'e' || e.key === 'Escape') {
+            close = true;
+            removeEventListener('keydown', handler);
+            removeEventListener('click', mouse_handler);
             resolve();
+            Game.current.resume();
+            clear();
         }
     }
-    addEventListener('keydown', handler);
-    /**
-     * @param {MouseEvent} e
-     */
-    function mouse_handler(e) {
+    function mouse_handler() {
         const { mouse_x, mouse_y } = renderer;
-        renderer.batch(() => {
-            renderer.ctx.fillStyle = 'blue';
-            renderer.circle(mouse_x, mouse_y, 50);
-        });
+        if (
+            mouse_x < renderer.width * 0.425 ||
+            mouse_x > renderer.width * 0.875 ||
+            mouse_y > renderer.height * 0.545 ||
+            mouse_y < renderer.height * 0.1
+        ) {
+            if (selected !== null) {
+                player.inventory[selected.index] = null;
+                selected = null;
+            } else {
+                return;
+            }
+        }
+        let slot = null;
+        let column = Math.floor(
+            (mouse_x - renderer.width * 0.45) / (renderer.width * 0.025)
+        );
+        let row = 0;
+        if (mouse_y <= renderer.height * 0.5) {
+            row = Math.floor(
+                (mouse_y - renderer.height * 0.125) / (renderer.width * 0.025)
+            );
+        } else if (mouse_y > renderer.height * 0.475) {
+            row =
+                Math.floor(
+                    (renderer.height * 0.495 - renderer.height * 0.125) /
+                        (renderer.width * 0.025)
+                ) + 1;
+        }
+        const items_per_row = Math.floor(
+            (renderer.width * 0.87 - renderer.width * 0.45) /
+                (renderer.width * 0.025)
+        );
+        slot = clamp(0, items_per_row * row + column, 174);
+        const hovered = player.inventory[slot] ?? null;
+        if (selected !== null) {
+            [player.inventory[slot], player.inventory[selected.index]] = [
+                player.inventory[selected.index],
+                player.inventory[slot]
+            ];
+            if (hovered !== null) {
+            } else {
+                selected = null;
+            }
+        } else {
+            selected = {
+                index: slot,
+                x: mouse_x,
+                y: mouse_y
+            };
+        }
+        Game.current.save();
     }
+    /** @type {{ x: number; y: number; index: number } | null} */
+    let selected = null;
+    addEventListener('keydown', handler);
     addEventListener('click', mouse_handler);
-    await renderer.batch_async(async () => {
-        renderer.ctx.save();
-        renderer.ctx.strokeStyle = 'transparent';
-        renderer.ctx.fillStyle = '#848391';
-        renderer.ctx.roundRect(renderer.width * 0.435, renderer.height * 0.1, renderer.width * 0.425, renderer.height * 0.5, 15);
-        renderer.ctx.fill();
-        renderer.ctx.stroke();
-        renderer.ctx.lineWidth = 1.5;
-        renderer.ctx.strokeStyle = '#260048';
-        let inventory_index = -1;
-        for (let y = renderer.height * 0.125; y < renderer.height * 0.475; y += renderer.width * 0.025) {
-            for (let x = renderer.width * 0.45; x < renderer.width * 0.85; x += renderer.width * 0.025) {
-                renderer.ctx.roundRect(x, y, renderer.width * 0.02, renderer.width * 0.02, 5);
-                renderer.ctx.stroke();
-                if (player.inventory[++inventory_index]) {
-                    await player.inventory[inventory_index].assets[0].promise;
-                    renderer.ctx.drawImage(player.inventory[inventory_index].assets[0].image, x, y, renderer.width * 0.02, renderer.width * 0.02);
+    async function loop() {
+        if (close) {
+            return;
+        }
+        if (selected !== null) {
+            selected.x = renderer.mouse_x;
+            selected.y = renderer.mouse_y;
+        }
+        await renderer.batch_async(async () => {
+            renderer.clear();
+            renderer.ctx.save();
+            renderer.ctx.strokeStyle = 'transparent';
+            renderer.ctx.fillStyle = '#848391';
+            renderer.ctx.roundRect(
+                renderer.width * 0.435,
+                renderer.height * 0.1,
+                renderer.width * 0.425,
+                renderer.height * 0.5,
+                15
+            );
+            renderer.ctx.fill();
+            renderer.ctx.stroke();
+            renderer.ctx.lineWidth = 1.5;
+            renderer.ctx.strokeStyle = '#260048';
+            let inventory_index = -1;
+            for (
+                let y = renderer.height * 0.125;
+                y < renderer.height * 0.475;
+                y += renderer.width * 0.025
+            ) {
+                for (
+                    let x = renderer.width * 0.45;
+                    x < renderer.width * 0.85;
+                    x += renderer.width * 0.025
+                ) {
+                    renderer.ctx.roundRect(
+                        x,
+                        y,
+                        renderer.width * 0.02,
+                        renderer.width * 0.02,
+                        5
+                    );
+                    const item = player.inventory[++inventory_index] ?? null;
+                    if (
+                        selected !== null &&
+                        selected.index === inventory_index
+                    ) {
+                        if (item !== null) {
+                            await item.assets[0].promise;
+                            renderer.ctx.drawImage(
+                                item.assets[0].image,
+                                selected.x,
+                                selected.y,
+                                renderer.width * 0.02,
+                                renderer.width * 0.02
+                            );
+                        }
+                    } else if (item !== null) {
+                        await item.assets[0].promise;
+                        renderer.ctx.drawImage(
+                            item.assets[0].image,
+                            x,
+                            y,
+                            renderer.width * 0.02,
+                            renderer.width * 0.02
+                        );
+                    }
                 }
             }
-        }
-        for (let x = renderer.width * 0.45; x < renderer.width * 0.85; x += renderer.width * 0.025) {
-            renderer.ctx.roundRect(x, renderer.height * 0.525, renderer.width * 0.02, renderer.width * 0.02, 5);
-            renderer.ctx.stroke();
-            if (player.inventory[++inventory_index]) {
-                await player.inventory[inventory_index].assets[0].promise;
-                renderer.ctx.drawImage(player.inventory[inventory_index].assets[0].image, x, renderer.height * 0.1, renderer.width * 0.02, renderer.width * 0.02);
+            for (
+                let x = renderer.width * 0.45;
+                x < renderer.width * 0.85;
+                x += renderer.width * 0.025
+            ) {
+                renderer.ctx.roundRect(
+                    x,
+                    renderer.height * 0.525,
+                    renderer.width * 0.02,
+                    renderer.width * 0.02,
+                    5
+                );
+                const item = player.inventory[++inventory_index] ?? null;
+                if (selected !== null && selected.index === inventory_index) {
+                    if (item !== null) {
+                        await item.assets[0].promise;
+                        renderer.ctx.drawImage(
+                            item.assets[0].image,
+                            selected.x,
+                            selected.y,
+                            renderer.width * 0.02,
+                            renderer.width * 0.02
+                        );
+                    }
+                } else if (item !== null) {
+                    await item.assets[0].promise;
+                    renderer.ctx.drawImage(
+                        item.assets[0].image,
+                        x,
+                        renderer.height * 0.525,
+                        renderer.width * 0.02,
+                        renderer.width * 0.02
+                    );
+                }
             }
-        }
-        renderer.ctx.restore();
-    });
-    Game.current.pause();
+            renderer.ctx.stroke();
+            renderer.ctx.restore();
+        });
+        return requestAnimationFrame(loop);
+    }
+    loop();
     return promise;
 }

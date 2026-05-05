@@ -103,17 +103,11 @@ class Renderer {
                 /** @type {any} */ (Renderer.#get_handler(this))
             );
             display.addEventListener('mousemove', event => {
-                const x = event.clientX - display.offsetLeft - innerWidth / 4;
-                const y = event.clientY - display.offsetTop;
+                const x = ((event.clientX - display.offsetLeft) / display.clientWidth) * this.width;
+                const y = ((event.clientY - display.offsetTop) / display.clientHeight) * this.height;
 
-                if (document.pointerLockElement === display) {
-                    this.#mouse_x = x;
-                    this.#mouse_y = y;
-                } else {
-                    this.#mouse_x = x;
-                    this.#mouse_y = y;
-                }
-                console.log({ x, y });
+                this.#mouse_x = x;
+                this.#mouse_y = y;
             });
         }
 

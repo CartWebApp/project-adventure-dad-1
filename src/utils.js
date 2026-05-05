@@ -127,6 +127,15 @@ export function asset(path) {
 }
 
 /**
+ * @param {number} min
+ * @param {number} value
+ * @param {number} max
+ */
+export function clamp(min, value, max) {
+    return Math.max(min, Math.min(value, max));
+}
+
+/**
  * @param {number} start
  * @param {number} end
  * @param {number} degree
