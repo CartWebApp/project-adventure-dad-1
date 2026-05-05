@@ -33,7 +33,7 @@ class Player {
     combat_timer;
     extra_lives;
     resistances;
-    /** @type {Item[]} */
+    /** @type {Array<Item | null>} */
     inventory;
     /** @type {Spell[]} */
     spells;
@@ -79,7 +79,8 @@ class Player {
             rooted: 0,
             weakness: 0
         };
-        this.inventory = [items[1]];
+        this.inventory = Array(175).fill(null);
+        this.inventory[0] = items[1];
         this.spells = [];
         this.equipped = {
             weapon: null,
@@ -97,8 +98,8 @@ class Player {
                             this.character === CHARACTER_CHOICES.BEGGAR
                                 ? 'beggar'
                                 : this.character === CHARACTER_CHOICES.SLAVE
-                                  ? 'slave'
-                                  : 'knight'
+                                ? 'slave'
+                                : 'knight'
                         }/cast/${index + 1}.png`
                     )
                 )
@@ -120,7 +121,11 @@ class Player {
             inventory,
             ...props
         } = this;
-        return { ...props, health, inventory: inventory.map(item => item.name) };
+        return {
+            ...props,
+            health,
+            inventory: inventory.map(item => item?.name ?? null)
+        };
     }
 
     /**
@@ -134,8 +139,8 @@ class Player {
                     this.character === CHARACTER_CHOICES.BEGGAR
                         ? 'beggar'
                         : this.character === CHARACTER_CHOICES.SLAVE
-                          ? 'slave'
-                          : 'knight'
+                        ? 'slave'
+                        : 'knight'
                 }/${orientation}.png`
             ),
             { scale }

@@ -4,6 +4,7 @@ import { RaytracingRenderer } from './raytracing.js';
 import { interpolate, pixelator, sleep } from './utils.js';
 import './images.js';
 import { Game } from './game.js';
+import { inventory } from './ui.js';
 const canvas = /** @type {HTMLCanvasElement} */ (
     document.querySelector('canvas.raytraced')
 );
@@ -11,9 +12,9 @@ canvas.style.opacity = '1';
 canvas.style.display = 'none';
 canvas.height = window.innerHeight;
 canvas.width = window.innerWidth;
-canvas.addEventListener('click', () => {
-    canvas.requestPointerLock();
-});
+// canvas.addEventListener('click', () => {
+//     canvas.requestPointerLock();
+// });
 const display = document.createElement('canvas');
 document.body.firstElementChild?.appendChild(display);
 display.height = window.innerHeight / 2;
@@ -35,13 +36,23 @@ const renderer = new RaytracingRenderer(
     },
     pixelator(2)
 );
+
+let opened_inventory = false;
+addEventListener('keydown', e => {
+    if (e.key === 'e' && !opened_inventory && Game.current?.player !== undefined) {
+        opened_inventory = true;
+        inventory(Game.current.player).then(() => {
+            opened_inventory = false;
+        });
+    }
+});
 const game = new Game(renderer);
 async function loop() {
     if (game.current_step === null) {
         return;
     }
-    while (game.paused) {
-        await sleep(10);
+    if (game.paused) {
+        await game.resume_promise;
     }
     await game.update();
     return requestAnimationFrame(loop);

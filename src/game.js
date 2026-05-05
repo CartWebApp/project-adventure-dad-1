@@ -49,11 +49,18 @@ export class Game {
     step_sequence = [];
     time = 140; // offset it a bit so it starts at daytime
     paused = false;
+    resume_promise = Promise.resolve();
+    resolve = () => {};
     pause() {
+        /** @type {PromiseWithResolvers<void>} */
+        const { promise, resolve } = Promise.withResolvers();
+        this.resume_promise = promise;
+        this.resolve = resolve;
         this.paused = true;
     }
     resume() {
         this.paused = false;
+        this.resolve();
     }
     /**
      * @param {RaytracingRenderer} renderer
