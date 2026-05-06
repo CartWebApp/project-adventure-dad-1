@@ -1,9 +1,9 @@
-import { DIFFICULTY } from './battle.js';
+/** @import { DIFFICULTY } from './constants.js' */
+/** @import { RaytracingRenderer } from './raytracing.js' */
 import { Player } from './character.js';
 import { ORIENTATIONS } from './constants.js';
-import { items } from './obtainables.js';
-import { RaytracingRenderer } from './raytracing.js';
 import { Step, story } from './story.js';
+import { items } from './obtainables.js';
 
 /**
  * @template T

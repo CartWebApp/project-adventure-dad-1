@@ -1,5 +1,5 @@
-import { Player } from './character.js';
-import { Game } from './game.js';
+/** @import { Game } from './game.js' */
+/** @import { Player } from './character.js' */
 import { Renderer } from './renderer.js';
 import { clamp, InterpolatingDoubleTreeMap, sleep } from './utils.js';
 
@@ -15,6 +15,16 @@ document.body.firstElementChild?.append(display);
 display.height = window.innerHeight / 2;
 display.width = window.innerWidth / 2;
 display.classList.add('ui');
+/** @type {Game} */
+let game;
+
+/**
+ * @param {Game} current_game
+ */
+export function init(current_game) {
+    game = current_game;
+}
+
 window.addEventListener('resize', () => {
     display.height = window.innerHeight / 2;
     display.width = window.innerWidth / 2;
@@ -574,7 +584,7 @@ export function clear() {
  * @param {Player} player
  */
 export async function inventory(player) {
-    Game.current.pause();
+    game.pause();
     let close = false;
     /** @type {PromiseWithResolvers<void>} */
     const { promise, resolve } = Promise.withResolvers();
@@ -587,7 +597,7 @@ export async function inventory(player) {
             removeEventListener('keydown', handler);
             removeEventListener('click', mouse_handler);
             resolve();
-            Game.current.resume();
+            game.resume();
             clear();
         }
     }
@@ -644,7 +654,7 @@ export async function inventory(player) {
                 y: mouse_y
             };
         }
-        Game.current.save();
+        game.save();
     }
     /** @type {{ x: number; y: number; index: number } | null} */
     let selected = null;

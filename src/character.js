@@ -1,12 +1,8 @@
 // @ts-check
+/** @import { Item, Spell } from './obtainables.js' */
 import { CHARACTER_CHOICES, ORIENTATIONS } from './constants.js';
 import { Animation, Image } from './objects.js';
-import { Item, items, Spell } from './obtainables.js';
 import { asset } from './utils.js';
-export const damageReduction = 0;
-export const combatTimer = 100;
-export const stamina_regen = 10;
-
 // Character Stats and Inventory
 
 class Player {
@@ -80,7 +76,6 @@ class Player {
             weakness: 0
         };
         this.inventory = Array(175).fill(null);
-        this.inventory[0] = items[1];
         this.spells = [];
         this.equipped = {
             weapon: null,

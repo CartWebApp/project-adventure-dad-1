@@ -1,13 +1,12 @@
+/** @import { Game } from './game.js' */
 import { Player } from './character.js';
 import { Entity } from './combat.js';
-import { CHARACTER_CHOICES, STATES } from './constants.js';
-import { Game } from './game.js';
+import { CHARACTER_CHOICES, DIFFICULTY, STATES } from './constants.js';
 // import { Ground, Knight, Moon, Sun, Tree } from './objects.js';
 import { Renderer } from './renderer.js';
 import { clear, dialog, health, input, select, status_bar } from './ui.js';
 import {
     CombatBuilder,
-    DIFFICULTY,
     pickEnemiesForDifficulty
 } from './battle.js';
 import { items, spells, potions, getArmorForRarity } from './obtainables.js';
