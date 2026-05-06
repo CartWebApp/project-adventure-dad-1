@@ -1,17 +1,19 @@
+/** @import { Game } from './game.js' */
 import { Player } from './character.js';
 import { Entity } from './combat.js';
-import { CHARACTER_CHOICES, STATES } from './constants.js';
-import { Game } from './game.js';
+import {
+    CHARACTER_CHOICES,
+    DIFFICULTY,
+    STATES,
+    TIME_SLOWDOWN
+} from './constants.js';
 // import { Ground, Knight, Moon, Sun, Tree } from './objects.js';
 import { Renderer } from './renderer.js';
 import { clear, dialog, health, input, select, status_bar } from './ui.js';
-import {
-    CombatBuilder,
-    DIFFICULTY,
-    pickEnemiesForDifficulty
-} from './battle.js';
+import { CombatBuilder, pickEnemiesForDifficulty } from './battle.js';
 import { items, spells, potions, getArmorForRarity } from './obtainables.js';
-import { interpolate, sleep } from './utils.js';
+import { asset, interpolate, sleep } from './utils.js';
+import { Ground, Image, Moon, Sun } from './objects.js';
 
 /**
  * Base class for story building purposes.
@@ -256,15 +258,15 @@ class BattleEncounter extends Step {
                 difficulty === DIFFICULTY.EASY
                     ? 0.3
                     : difficulty === DIFFICULTY.MEDIUM
-                      ? 0.6
-                      : 0.9;
+                    ? 0.6
+                    : 0.9;
             if (Math.random() < armorChance) {
                 const rarity =
                     difficulty === DIFFICULTY.EASY
                         ? 'common'
                         : difficulty === DIFFICULTY.MEDIUM
-                          ? 'rare'
-                          : 'epic';
+                        ? 'rare'
+                        : 'epic';
                 const armorPool = getArmorForRarity(rarity) || [];
                 if (armorPool.length > 0) {
                     const chosenArmor = JSON.parse(
@@ -283,16 +285,16 @@ class BattleEncounter extends Step {
                 difficulty === DIFFICULTY.EASY
                     ? 0.2
                     : difficulty === DIFFICULTY.MEDIUM
-                      ? 0.5
-                      : 0.8;
+                    ? 0.5
+                    : 0.8;
             if (Math.random() < spellChance && spells.length > 0) {
                 // Prefer spells that have params or costs for the target rarity
                 const targetRarity =
                     difficulty === DIFFICULTY.EASY
                         ? 'common'
                         : difficulty === DIFFICULTY.MEDIUM
-                          ? 'rare'
-                          : 'epic';
+                        ? 'rare'
+                        : 'epic';
                 const candidates = spells.filter(s => {
                     return (
                         (s.params_by_rarity &&
@@ -712,6 +714,12 @@ class Render extends Step {
 }
 
 localStorage.name ??= '';
+// new LoopedGroup(
+//     new Branch(() => {
+//         const random = Math.random();
+//         return random < 1 ? 0 : 1;
+//     }).with_branches(new BattleEncounter(DIFFICULTY.MEDIUM), null)
+// ).with_delay(100),
 export const story = new Parallel(
     new Input('Choose a name.')
         .with_validator(
@@ -802,15 +810,60 @@ export const story = new Parallel(
     )
     .then(
         new Parallel(
-            new LoopedGroup(
-                new Branch(() => {
-                    const random = Math.random();
-                    return random < 1 ? 0 : 1;
-                }).with_branches(new BattleEncounter(DIFFICULTY.MEDIUM), null)
-            ).with_delay(100),
+            new Execute(async ({ renderer, player }) => {
+                await renderer.batch(() => {
+                    renderer.clear();
+                    const cobblestone = new Image(
+                        asset('background/cobblestone.png'),
+                        { width: 16, height: 16, scale: 1 }
+                    );
+                    // await cobblestone.promise;
+                    renderer.entity(new Ground(), 0, 0);
+                    for (let x = 0; x < renderer.width; x += 32) {
+                        for (
+                            let y = renderer.height * 0.6;
+                            y < renderer.height * 0.825;
+                            y += 32
+                        ) {
+                            renderer.entity(cobblestone, x, y);
+                        }
+                    }
+                });
+            }),
+            // new Dialog('You awaken to the sound of someone calling your name')
+            //                 .with_overall_duration(2000)
+            //                 .then(
+            //                     new Parallel(
+
+            //                     )
+            // ),
+            // new Branch(game => game.player.character === CHARACTER_CHOICES.KNIGHT ? 0 : game.player.character === CHARACTER_CHOICES.SLAVE ? 1 : 2)
+            //     .with_branches(
+            //         new Step(),
+            //         new Step(),
+            //             new Dialog('You awaken to the sound of someone calling your name')
+            //                 .with_overall_duration(2000)
+            //                 .then(
+            //                     new Parallel(
+            //                         new Render(async ({ renderer, player }) => {
+            //                             await renderer.batch(() => {
+            //                                 const cobblestone = new Image(asset('background/cobblestone.png'), { width: 16, height: 16, scale: 2 });
+            //                                 for (let x = 0; x < renderer.width; x += 32) {
+            //                                     for (let y = renderer.height * 0.75; y < renderer.height * 0.825; y += 32) {
+            //                                         renderer.entity(cobblestone, x, y);
+            //                                     }
+            //                                 }
+            //                             });
+            //                         },
+            //                         game => sleep(2000))
+            //                     )
+            //                 )
+            //     ),
             // This loop is the way that time works
             // DO NOT PUT ANYTHING ELSE HERE, YOU WILL LITERALLY STOP TIME ITSELF
             new Loop(async game => {
+                await Promise.resolve();
+                game.renderer.clear();
                 game.time++;
                 game.renderer.refresh();
                 game.save();

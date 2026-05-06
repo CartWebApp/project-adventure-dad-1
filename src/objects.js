@@ -8,29 +8,38 @@ import {
     TREE_TRUNK_WIDTH,
     TREE_WIDTH
 } from './constants.js';
-import { Game } from './game.js';
 import { Entity, RaytracingRenderer } from './raytracing.js';
 import { Renderer } from './renderer.js';
 import { circle } from './utils.js';
+
+/** @type {RaytracingRenderer} */
+let renderer;
+
+/**
+ * @param {RaytracingRenderer} raytracing_renderer
+ */
+export function set_renderer(raytracing_renderer) {
+    renderer = raytracing_renderer;
+}
 
 export class Ground extends Entity {
     layer = 1;
     outline = [
         {
             x: 0,
-            y: Game.current.renderer.height * 0.65
+            y: renderer.height * 0.65
         },
         {
-            x: Game.current.renderer.width,
-            y: Game.current.renderer.height * 0.65
+            x: renderer.width,
+            y: renderer.height * 0.65
         },
         {
-            x: Game.current.renderer.width,
-            y: Game.current.renderer.height
+            x: renderer.width,
+            y: renderer.height
         },
         {
             x: 0,
-            y: Game.current.renderer.height
+            y: renderer.height
         }
     ];
     /**
@@ -55,19 +64,19 @@ export class BattleGround extends Entity {
     outline = [
         {
             x: 0,
-            y: Game.current.renderer.height * 0.45
+            y: renderer.height * 0.45
         },
         {
-            x: Game.current.renderer.width,
-            y: Game.current.renderer.height * 0.45
+            x: renderer.width,
+            y: renderer.height * 0.45
         },
         {
-            x: Game.current.renderer.width,
-            y: Game.current.renderer.height
+            x: renderer.width,
+            y: renderer.height
         },
         {
             x: 0,
-            y: Game.current.renderer.height
+            y: renderer.height
         }
     ];
     /**
@@ -94,8 +103,8 @@ export class Moon extends Entity {
         hue: /** @type {[number, number, number]} */ ([250, 250, 250]),
         spread:
             Math.max(
-                Game.current.renderer.width,
-                Game.current.renderer.height
+                renderer.width,
+                renderer.height
             ) * 0.9,
         start_angle: 0,
         end_angle: 360,
@@ -127,8 +136,8 @@ export class Sun extends Entity {
         hue: /** @type {[number, number, number]} */ ([250, 250, 120]),
         spread:
             Math.max(
-                Game.current.renderer.width,
-                Game.current.renderer.height
+                renderer.width,
+                renderer.height
             ) * 0.9,
         start_angle: 0,
         end_angle: 360,
@@ -153,33 +162,33 @@ export class Tree extends Entity {
     outline = [
         {
             x: TREE_TRUNK_WIDTH + TREE_WIDTH / 2,
-            y: Game.current.renderer.height * 0.75
+            y: renderer.height * 0.75
         },
         {
             x: TREE_WIDTH / 2,
-            y: Game.current.renderer.height * 0.75
+            y: renderer.height * 0.75
         },
         {
             x: TREE_WIDTH / 2,
-            y: Game.current.renderer.height * 0.75 - TREE_TRUNK_HEIGHT
+            y: renderer.height * 0.75 - TREE_TRUNK_HEIGHT
         },
         {
             x: 0,
-            y: Game.current.renderer.height * 0.75 - TREE_TRUNK_HEIGHT
+            y: renderer.height * 0.75 - TREE_TRUNK_HEIGHT
         },
         {
             x: TREE_TRUNK_WIDTH / 2 + TREE_WIDTH / 2,
             y:
-                Game.current.renderer.height * 0.75 -
+                renderer.height * 0.75 -
                 (TREE_HEIGHT + TREE_TRUNK_HEIGHT)
         },
         {
             x: TREE_WIDTH + TREE_WIDTH / 2,
-            y: Game.current.renderer.height * 0.75 - TREE_TRUNK_HEIGHT
+            y: renderer.height * 0.75 - TREE_TRUNK_HEIGHT
         },
         {
             x: TREE_TRUNK_WIDTH + TREE_WIDTH / 2,
-            y: Game.current.renderer.height * 0.75 - TREE_TRUNK_HEIGHT
+            y: renderer.height * 0.75 - TREE_TRUNK_HEIGHT
         }
     ];
     constructor() {
@@ -361,7 +370,7 @@ export class Image extends Entity {
         );
     }
 }
- 
+
 export class Animation extends Entity {
     /** @type {Entity[]} */
     frames = [];

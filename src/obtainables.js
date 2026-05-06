@@ -1,9 +1,8 @@
 /** @import { RaytracingRenderer } from './raytracing.js' */
 import { BaseBuilder, effects } from './combat.js';
-import { damageReduction, combatTimer } from './character.js';
-import { stamina_regen } from './character.js';
-import { asset } from './utils.js';
+import { combat_timer, damage_reduction, stamina_regen } from './constants.js';
 import { Image } from './objects.js';
+import { asset } from './utils.js';
 
 /**
  * @param {string} spellName
@@ -49,10 +48,10 @@ const legendaryAttributes = {
 
 const specialAttributes = {
     common() {
-        return damageReduction * 1.1;
+        return damage_reduction * 1.1;
     },
     rare() {
-        return combatTimer * 0.9;
+        return combat_timer * 0.9;
     },
     epic() {
         return stamina_regen * 1.5;
@@ -353,7 +352,11 @@ class Potion {
     }
 }
 
-class PotionBuilder extends /** @type {typeof BaseBuilder<{ [K in keyof Potion]: Potion[K] }, Potion>} */ (BaseBuilder) {
+class PotionBuilder
+    extends /** @type {typeof BaseBuilder<{ [K in keyof Potion]: Potion[K] }, Potion>} */ (
+        BaseBuilder
+    )
+{
     constructor() {
         super(data => new Potion(data), 'name', 'effect', 'costs');
     }
@@ -393,7 +396,11 @@ export class Item {
     }
 }
 
-class ItemBuilder extends /** @type {typeof BaseBuilder<{ [K in keyof Item]: Item[K] }, Item>} */ (BaseBuilder) {
+class ItemBuilder
+    extends /** @type {typeof BaseBuilder<{ [K in keyof Item]: Item[K] }, Item>} */ (
+        BaseBuilder
+    )
+{
     constructor() {
         super(
             data => new Item(data),
@@ -419,7 +426,11 @@ class Weapon {
     }
 }
 
-class WeaponBuilder extends /** @type {typeof BaseBuilder<{ [K in keyof Weapon]: Weapon[K] }, Weapon>} */ (BaseBuilder) {
+class WeaponBuilder
+    extends /** @type {typeof BaseBuilder<{ [K in keyof Weapon]: Weapon[K] }, Weapon>} */ (
+        BaseBuilder
+    )
+{
     constructor() {
         super(data => new Weapon(data), 'name', 'general', 'stats_by_rarity');
     }
@@ -574,8 +585,13 @@ const potions = [
         .build()
 ];
 
-function image(src) {
-    return new Image(asset(src), { width: 32, height: 32 });
+/**
+ * @param {string[]} src
+ */
+function item_assets(...src) {
+    return src.map(
+        src => new Image(asset(`items/${src}`), { width: 32, height: 32 })
+    );
 }
 
 const items = [
@@ -587,7 +603,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(5 * GOLD)
-        .with_assets([image('holy_hand_grenade.png')])
+        .with_assets(item_assets('holy_hand_grenade.png'))
         .build(),
     new ItemBuilder()
         .with_name('Rock')
@@ -595,7 +611,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(2 * COPPER)
-        .with_assets([image('rock.png')])
+        .with_assets(item_assets('rock.png'))
         .build(),
     new ItemBuilder()
         .with_name('Molotov Cocktail')
@@ -605,7 +621,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(30 * SILVER)
-        .with_assets([image('molotov_cocktail.png')])
+        .with_assets(item_assets('molotov_cocktail.png'))
         .build(),
     new ItemBuilder()
         .with_name('Old Boot')
@@ -613,7 +629,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(1 * COPPER)
-        .with_assets([image('old_boot.png')])
+        .with_assets(item_assets('old_boot.png'))
         .build(),
     new ItemBuilder()
         .with_name('Potato')
@@ -624,7 +640,7 @@ const items = [
         .with_uses(1)
         .with_edible_uses(1)
         .with_value(10 * COPPER)
-        .with_assets([image('potato.png')])
+        .with_assets(item_assets('potato.png'))
         .build(),
     new ItemBuilder()
         .with_name('Thinkpad X1 Carbon')
@@ -634,7 +650,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(10 * GOLD)
-        .with_assets([image('thinkpad_x1_carbon.png')])
+        .with_assets(item_assets('thinkpad_x1_carbon.png'))
         .build(),
     new ItemBuilder()
         .with_name('Sock Puppet')
@@ -642,16 +658,18 @@ const items = [
         .with_throwable(false)
         .with_uses(1)
         .with_value(10 * COPPER)
-        .with_assets([
-            image('sock_puppet_1.png'),
-            image('sock_puppet_2.png'),
-            image('sock_puppet_3.png'),
-            image('sock_puppet_4.png'),
-            image('sock_puppet_5.png'),
-            image('sock_puppet_6.png'),
-            image('sock_puppet_7.png'),
-            image('sock_puppet_8.png')
-        ])
+        .with_assets(
+            item_assets(
+                'sock_puppet_1.png',
+                'sock_puppet_2.png',
+                'sock_puppet_3.png',
+                'sock_puppet_4.png',
+                'sock_puppet_5.png',
+                'sock_puppet_6.png',
+                'sock_puppet_7.png',
+                'sock_puppet_8.png'
+            )
+        )
         .build(),
     new ItemBuilder()
         .with_name('The Last Straw')
@@ -661,13 +679,15 @@ const items = [
         .with_throwable(false)
         .with_uses(1)
         .with_value(15 * SILVER)
-        .with_assets([
-            image('the_last_straw_1.png'),
-            image('the_last_straw_2.png'),
-            image('the_last_straw_3.png'),
-            image('the_last_straw_4.png'),
-            image('the_last_straw_5.png')
-        ])
+        .with_assets(
+            item_assets(
+                'the_last_straw_1.png',
+                'the_last_straw_2.png',
+                'the_last_straw_3.png',
+                'the_last_straw_4.png',
+                'the_last_straw_5.png'
+            )
+        )
         .build(),
     new ItemBuilder()
         .with_name('Napkin')
@@ -675,7 +695,7 @@ const items = [
         .with_throwable(true)
         .with_uses(1)
         .with_value(10 * COPPER)
-        .with_assets([image('napkin.png')])
+        .with_assets(item_assets('napkin.png'))
         .build(),
     new ItemBuilder()
         .with_name('Anvil')
@@ -683,7 +703,7 @@ const items = [
         .with_throwable(true)
         .with_uses(3)
         .with_value(50 * SILVER)
-        .with_assets([image('anvil.png')])
+        .with_assets(item_assets('anvil.png'))
         .build()
 ];
 

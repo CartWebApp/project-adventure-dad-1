@@ -1,12 +1,8 @@
 // @ts-check
+/** @import { Item, Spell } from './obtainables.js' */
 import { CHARACTER_CHOICES, ORIENTATIONS } from './constants.js';
 import { Animation, Image } from './objects.js';
-import { Item, items, Spell } from './obtainables.js';
 import { asset } from './utils.js';
-export const damageReduction = 0;
-export const combatTimer = 100;
-export const stamina_regen = 10;
-
 // Character Stats and Inventory
 
 class Player {
@@ -45,6 +41,10 @@ class Player {
     direction = ORIENTATIONS.EAST;
     /** @type {Animation} */
     cast_animation;
+    /** @type {Animation} */
+    walk_east_animation;
+    /** @type {Animation} */
+    walk_west_animation;
 
     /**
      * @param {string} name
@@ -80,7 +80,6 @@ class Player {
             weakness: 0
         };
         this.inventory = Array(175).fill(null);
-        this.inventory[0] = items[1];
         this.spells = [];
         this.equipped = {
             weapon: null,
@@ -89,19 +88,37 @@ class Player {
             spells: []
         };
         this.money = 0;
+        const character_name =
+            this.character === CHARACTER_CHOICES.BEGGAR
+                ? 'beggar'
+                : this.character === CHARACTER_CHOICES.SLAVE
+                ? 'slave'
+                : 'knight';
         this.cast_animation = new Animation(
             ...Array(this.character === CHARACTER_CHOICES.SLAVE ? 7 : 8)
                 .fill(0)
                 .map((_, index) =>
-                    asset(
-                        `${
-                            this.character === CHARACTER_CHOICES.BEGGAR
-                                ? 'beggar'
-                                : this.character === CHARACTER_CHOICES.SLAVE
-                                ? 'slave'
-                                : 'knight'
-                        }/cast/${index + 1}.png`
-                    )
+                    asset(`${character_name}/cast/${index + 1}.png`)
+                )
+                .map(
+                    name => new Image(name, { width: 92, height: 92, scale: 7 })
+                )
+        );
+        this.walk_east_animation = new Animation(
+            ...Array(3)
+                .fill(0)
+                .map((_, index) =>
+                    asset(`${character_name}/walk-east/${index + 1}.png`)
+                )
+                .map(
+                    name => new Image(name, { width: 92, height: 92, scale: 7 })
+                )
+        );
+        this.walk_west_animation = new Animation(
+            ...Array(3)
+                .fill(0)
+                .map((_, index) =>
+                    asset(`${character_name}/walk-west/${index + 1}.png`)
                 )
                 .map(
                     name => new Image(name, { width: 92, height: 92, scale: 7 })
@@ -117,6 +134,8 @@ class Player {
             applyAttributes,
             get_entity,
             cast_animation,
+            walk_east_animation,
+            walk_west_animation,
             health,
             inventory,
             ...props
