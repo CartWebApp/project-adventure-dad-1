@@ -369,6 +369,13 @@ export function item_image(src) {
     return new Image(asset(src), { width: 32, height: 32 });
 }
 
+/**
+ * @param {string[]} src
+ */
+export function item_assets(...src) {
+    return src.map(item_image);
+}
+
 export class Animation extends Entity {
     /** @type {Entity[]} */
     frames = [];
