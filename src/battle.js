@@ -6,7 +6,6 @@ import {
     effects as COMBAT_EFFECTS,
     Enemy
 } from './combat.js';
-import { spells as SPELL_DEFINITIONS } from './obtainables.js';
 import { Player } from './character.js';
 import { TICKS_PER_SEC } from './combat.js';
 import { clear, dialog, input, select } from './ui.js';
@@ -14,6 +13,7 @@ import { Game } from './game.js';
 import { asset, sleep } from './utils.js';
 import { BattleGround, Image } from './objects.js';
 import { RaytracingRenderer } from './raytracing.js';
+import { spells as SPELL_DEFINITIONS } from './obtainables.js';
 
 /** @type {{EASY:'easy', MEDIUM:'medium', HARD:'hard'}} */
 const DIFFICULTY = {
