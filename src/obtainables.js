@@ -589,7 +589,9 @@ const potions = [
  * @param {string[]} src
  */
 function item_assets(...src) {
-    return src.map(src => new Image(asset(src), { width: 32, height: 32 }));
+    return src.map(
+        src => new Image(asset(`items/${src}`), { width: 32, height: 32 })
+    );
 }
 
 const items = [

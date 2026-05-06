@@ -223,6 +223,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         this.ctx.restore();
         await this.#render();
         resolve();
+        return promise;
     }
 
     #queue_render() {
@@ -241,12 +242,6 @@ export class RaytracingRenderer extends Renderer.Offscreen {
     }
 
     async #render() {
-        const entities = [...this.#entities].toSorted(
-            (a, b) => a.entity.layer - b.entity.layer
-        );
-        // await request_animation_frame();
-        // await new Promise(resolve => requestAnimationFrame(resolve));
-        this.#entities.length = 0;
         [this.#hidden_frame.style.zIndex, this.#current_frame.style.zIndex] = [
             this.#current_frame.style.zIndex,
             this.#hidden_frame.style.zIndex
@@ -261,10 +256,16 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         ];
         this.display = this.#hidden_frame;
         this.display_ctx = this.#hidden_ctx;
+        super.clear();
+        this.#background(this);
+        const entities = [...this.#entities].toSorted(
+            (a, b) => a.entity.layer - b.entity.layer
+        );
+        // await request_animation_frame();
+        // await new Promise(resolve => requestAnimationFrame(resolve));
+        this.#entities.length = 0;
         try {
             await super.batch_async(async () => {
-                super.clear();
-                this.#background(this);
                 // console.log(this.#map);
                 for (const e of entities) {
                     const { entity, x, y } = e;
