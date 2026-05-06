@@ -1,10 +1,10 @@
 // @ts-check
 import { TIME_SLOWDOWN } from './constants.js';
 import { RaytracingRenderer } from './raytracing.js';
-import { interpolate, pixelator, sleep } from './utils.js';
+import { interpolate, pixelator } from './utils.js';
 import './images.js';
 import { Game } from './game.js';
-import { inventory } from './ui.js';
+import { init, inventory } from './ui.js';
 const canvas = /** @type {HTMLCanvasElement} */ (
     document.querySelector('canvas.raytraced')
 );
@@ -47,6 +47,7 @@ addEventListener('keydown', e => {
     }
 });
 const game = new Game(renderer);
+init(game);
 async function loop() {
     if (game.current_step === null) {
         return;
