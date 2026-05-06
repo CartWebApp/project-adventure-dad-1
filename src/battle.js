@@ -14,13 +14,7 @@ import { Game } from './game.js';
 import { sleep } from './utils.js';
 import { BattleGround } from './objects.js';
 import { spells as SPELL_DEFINITIONS } from './obtainables.js';
-
-/** @type {{EASY:'easy', MEDIUM:'medium', HARD:'hard'}} */
-const DIFFICULTY = {
-    EASY: 'easy',
-    MEDIUM: 'medium',
-    HARD: 'hard'
-};
+import { DIFFICULTY } from './constants.js';
 
 /**
  * @param {any} enemy
@@ -907,7 +901,6 @@ class CombatBuilder
 export {
     Combat,
     CombatBuilder,
-    DIFFICULTY,
     pickEnemiesForDifficulty,
     playerCast,
     playerMelee

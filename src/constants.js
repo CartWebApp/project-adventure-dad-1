@@ -36,3 +36,8 @@ export const ORIENTATIONS = /** @type {const} */ ({
     SOUTHWEST: 'south-west',
     SOUTHEAST: 'south-east'
 });
+export const DIFFICULTY = /** @type {const} */ ({
+    EASY: 'easy',
+    MEDIUM: 'medium',
+    HARD: 'hard'
+});
