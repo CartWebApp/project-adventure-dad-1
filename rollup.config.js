@@ -7,7 +7,8 @@ export default defineConfig({
     input: 'src/index.js',
     output: {
         dir: './dist',
-        format: 'esm'
+        format: 'esm',
+        exports: 'none'
     },
     plugins: [
         alias({
