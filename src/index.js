@@ -5,6 +5,7 @@ import { interpolate, pixelator } from './utils.js';
 import './images.js';
 import { Game } from './game.js';
 import { init, inventory } from './ui.js';
+import { set_renderer } from './objects.js';
 const canvas = /** @type {HTMLCanvasElement} */ (
     document.querySelector('canvas.raytraced')
 );
@@ -46,6 +47,7 @@ addEventListener('keydown', e => {
         });
     }
 });
+set_renderer(renderer);
 const game = new Game(renderer);
 init(game);
 async function loop() {
