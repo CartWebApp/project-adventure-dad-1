@@ -152,7 +152,7 @@ async function processEffects(actor) {
     }
     actor.effects = remaining;
 }
-
+/** @type {Record<string, (enemy: Enemy, player: Player) => Promise<void>>} */
 const ENEMY_BEHAVIORS = {};
 /**
  * Simple enemy AI
@@ -166,8 +166,8 @@ function dealBasicDamage(enemy, player, scale = 0.03) {
     return final;
 }
 /**
- * @param {*} percent 
- * @returns 
+ * @param {*} percent
+ * @returns
  */
 function applyChance(percent) {
     return Math.random() * 100 < percent;
@@ -181,16 +181,23 @@ function applyChance(percent) {
  */
 function logEffect(enemy, player, effectName, effectObj) {
     applyEffect(player, effectObj);
-    return dialog(`${enemy.name} uses ${effectName} — applied ${effectObj.name}.`);
+    return dialog(
+        `${enemy.name} uses ${effectName} — applied ${effectObj.name}.`
+    );
 }
 // Assassin
-ENEMY_BEHAVIORS["assassin"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['assassin'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.5) {
         const dmg = dealBasicDamage(enemy, player, 0.05);
         await dialog(`${enemy.name} performs Backstab for ${dmg} damage!`);
     } else if (roll < 0.8) {
-        await logEffect(enemy, player, "Poison Blade", COMBAT_EFFECTS.poison(1));
+        await logEffect(
+            enemy,
+            player,
+            'Poison Blade',
+            COMBAT_EFFECTS.poison(1)
+        );
     } else {
         await dialog(`${enemy.name} vanishes — next attack against it misses!`);
         enemy.dodge_next = true;
@@ -198,13 +205,18 @@ ENEMY_BEHAVIORS["assassin"] = async (enemy, player) => {
 };
 
 // Bandit
-ENEMY_BEHAVIORS["bandit"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['bandit'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.6) {
         const dmg = dealBasicDamage(enemy, player);
         await dialog(`${enemy.name} slashes you for ${dmg}.`);
     } else if (roll < 0.85) {
-        await logEffect(enemy, player, "Dirty Trick", COMBAT_EFFECTS.blindness());
+        await logEffect(
+            enemy,
+            player,
+            'Dirty Trick',
+            COMBAT_EFFECTS.blindness()
+        );
     } else {
         const stolen = Math.floor(Math.random() * 20) + 5;
         player.money = Math.max(0, (player.money || 0) - stolen);
@@ -213,20 +225,25 @@ ENEMY_BEHAVIORS["bandit"] = async (enemy, player) => {
 };
 
 // Basilisk
-ENEMY_BEHAVIORS["basilisk"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['basilisk'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.5) {
         const dmg = dealBasicDamage(enemy, player, 0.04);
         await dialog(`${enemy.name} whips its tail for ${dmg} damage.`);
     } else if (roll < 0.8) {
-        await logEffect(enemy, player, "Bite", COMBAT_EFFECTS.poison(1));
+        await logEffect(enemy, player, 'Bite', COMBAT_EFFECTS.poison(1));
     } else {
-        await logEffect(enemy, player, "Petrifying Gaze", COMBAT_EFFECTS.petrified());
+        await logEffect(
+            enemy,
+            player,
+            'Petrifying Gaze',
+            COMBAT_EFFECTS.petrified()
+        );
     }
 };
 
 // Beserker
-ENEMY_BEHAVIORS["beserker"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['beserker'] = async (enemy, player) => {
     const missing = 1 - enemy.health / enemy.max_health;
     const dmgScale = 0.03 + missing * 0.05;
     const roll = Math.random();
@@ -240,76 +257,92 @@ ENEMY_BEHAVIORS["beserker"] = async (enemy, player) => {
     } else {
         const dmg = dealBasicDamage(enemy, player, 0.04);
         applyDamage(enemy, Math.round(dmg * 0.5));
-        await dialog(`${enemy.name} performs Reckless Swing — both take damage!`);
+        await dialog(
+            `${enemy.name} performs Reckless Swing — both take damage!`
+        );
     }
 };
 
 // Doppelgänger
-ENEMY_BEHAVIORS["doppelgänger"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['doppelgänger'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.5) {
         const dmg = dealBasicDamage(enemy, player, 0.03);
-        await dialog(`${enemy.name} copies your last move — Mirror Strike for ${dmg}.`);
+        await dialog(
+            `${enemy.name} copies your last move — Mirror Strike for ${dmg}.`
+        );
     } else {
-        await logEffect(enemy, player, "Confuse", COMBAT_EFFECTS.cursed());
+        await logEffect(enemy, player, 'Confuse', COMBAT_EFFECTS.cursed());
     }
 };
 
 // Druid
-ENEMY_BEHAVIORS["druid"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['druid'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.5) {
         const dmg = dealBasicDamage(enemy, player);
         await dialog(`${enemy.name} uses Vine Whip for ${dmg}.`);
         if (applyChance(10)) {
-            await logEffect(enemy, player, "Rooted", COMBAT_EFFECTS.rooted());
+            await logEffect(enemy, player, 'Rooted', COMBAT_EFFECTS.rooted());
         }
     } else if (roll < 0.8) {
-        await logEffect(enemy, player, "Nature's Curse", COMBAT_EFFECTS.cursed());
+        await logEffect(
+            enemy,
+            player,
+            "Nature's Curse",
+            COMBAT_EFFECTS.cursed()
+        );
     } else {
-        await logEffect(enemy, player, "Vine Grasp", COMBAT_EFFECTS.rooted());
+        await logEffect(enemy, player, 'Vine Grasp', COMBAT_EFFECTS.rooted());
     }
 };
 
 // Fire Elemental
-ENEMY_BEHAVIORS["fire elemental"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['fire elemental'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.5) {
         const dmg = dealBasicDamage(enemy, player);
         await dialog(`${enemy.name} slashes with fire for ${dmg}.`);
         if (applyChance(50)) {
-            await logEffect(enemy, player, "Burning", COMBAT_EFFECTS.burning());
+            await logEffect(enemy, player, 'Burning', COMBAT_EFFECTS.burning());
         }
     } else if (roll < 0.8) {
         enemy.damage_buff = 1.5;
         await dialog(`${enemy.name} ignites — next attack deals +50% damage!`);
     } else {
-        await logEffect(enemy, player, "Frost Burn", COMBAT_EFFECTS.burning());
-        await logEffect(enemy, player, "Iced", COMBAT_EFFECTS.iced());
+        await logEffect(enemy, player, 'Frost Burn', COMBAT_EFFECTS.burning());
+        await logEffect(enemy, player, 'Iced', COMBAT_EFFECTS.iced());
     }
 };
 
 // Fire Salamander
-ENEMY_BEHAVIORS["fire salamander"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['fire salamander'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.5) {
-        await logEffect(enemy, player, "Flame Bite", COMBAT_EFFECTS.burning());
+        await logEffect(enemy, player, 'Flame Bite', COMBAT_EFFECTS.burning());
     } else if (roll < 0.8) {
-        await logEffect(enemy, player, "Lava Spit", COMBAT_EFFECTS.burning());
+        await logEffect(enemy, player, 'Lava Spit', COMBAT_EFFECTS.burning());
     } else {
         enemy.damage_reduction = (enemy.damage_reduction || 0) + 10;
-        await dialog(`${enemy.name} raises a Heat Shield — +10% damage reduction.`);
+        await dialog(
+            `${enemy.name} raises a Heat Shield — +10% damage reduction.`
+        );
     }
 };
 
 // Gargoyle
-ENEMY_BEHAVIORS["gargoyle"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['gargoyle'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.5) {
         const dmg = dealBasicDamage(enemy, player, 0.04);
         await dialog(`${enemy.name} claws you for ${dmg}.`);
     } else if (roll < 0.8) {
-        await logEffect(enemy, player, "Petrify Touch", COMBAT_EFFECTS.petrified());
+        await logEffect(
+            enemy,
+            player,
+            'Petrify Touch',
+            COMBAT_EFFECTS.petrified()
+        );
     } else {
         enemy.damage_reduction = (enemy.damage_reduction || 0) + 50;
         await dialog(`${enemy.name} hardens — +50% damage resistance.`);
@@ -317,7 +350,7 @@ ENEMY_BEHAVIORS["gargoyle"] = async (enemy, player) => {
 };
 
 // Goblin
-ENEMY_BEHAVIORS["goblin"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['goblin'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.6) {
         const dmg = dealBasicDamage(enemy, player);
@@ -332,16 +365,21 @@ ENEMY_BEHAVIORS["goblin"] = async (enemy, player) => {
 };
 
 // Lightning Elemental
-ENEMY_BEHAVIORS["lightning elemental"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['lightning elemental'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.5) {
         const dmg = dealBasicDamage(enemy, player);
         await dialog(`${enemy.name} shocks you for ${dmg}.`);
         if (applyChance(10)) {
-            await logEffect(enemy, player, "Shock", COMBAT_EFFECTS.shocked());
+            await logEffect(enemy, player, 'Shock', COMBAT_EFFECTS.shocked());
         }
     } else if (roll < 0.8) {
-        await logEffect(enemy, player, "Static Surge", COMBAT_EFFECTS.shocked());
+        await logEffect(
+            enemy,
+            player,
+            'Static Surge',
+            COMBAT_EFFECTS.shocked()
+        );
     } else {
         enemy.dodge_next = true;
         await dialog(`${enemy.name} dashes — next attack misses!`);
@@ -349,13 +387,16 @@ ENEMY_BEHAVIORS["lightning elemental"] = async (enemy, player) => {
 };
 
 // Mimic
-ENEMY_BEHAVIORS["mimic"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['mimic'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.5) {
         const dmg = dealBasicDamage(enemy, player, 0.04);
         await dialog(`${enemy.name} bites you for ${dmg}.`);
     } else if (roll < 0.8) {
-        enemy.health = Math.min(enemy.max_life, enemy.health + Math.round(enemy.max_life * 0.05));
+        enemy.health = Math.min(
+            enemy.max_life,
+            enemy.health + Math.round(enemy.max_life * 0.05)
+        );
         await dialog(`${enemy.name} heals slightly.`);
     } else {
         enemy.damage_reduction = (enemy.damage_reduction || 0) + 100;
@@ -364,12 +405,17 @@ ENEMY_BEHAVIORS["mimic"] = async (enemy, player) => {
 };
 
 // Plant Monster
-ENEMY_BEHAVIORS["plant monster"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['plant monster'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.5) {
-        await logEffect(enemy, player, "Vine Grab", COMBAT_EFFECTS.rooted());
+        await logEffect(enemy, player, 'Vine Grab', COMBAT_EFFECTS.rooted());
     } else if (roll < 0.8) {
-        await logEffect(enemy, player, "Spore Cloud", COMBAT_EFFECTS.blindness());
+        await logEffect(
+            enemy,
+            player,
+            'Spore Cloud',
+            COMBAT_EFFECTS.blindness()
+        );
     } else {
         const dmg = dealBasicDamage(enemy, player, 0.04);
         enemy.health += Math.round(dmg * 0.3);
@@ -378,26 +424,36 @@ ENEMY_BEHAVIORS["plant monster"] = async (enemy, player) => {
 };
 
 // Rogue Knight
-ENEMY_BEHAVIORS["rogue knight"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['rogue knight'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.5) {
         const dmg = dealBasicDamage(enemy, player, 0.05);
         await dialog(`${enemy.name} performs Heavy Slash for ${dmg}.`);
     } else if (roll < 0.8) {
-        await logEffect(enemy, player, "Shield Bash", COMBAT_EFFECTS.shocked());
+        await logEffect(enemy, player, 'Shield Bash', COMBAT_EFFECTS.shocked());
     } else {
-        await logEffect(enemy, player, "Dark Resolve", COMBAT_EFFECTS.weakness());
+        await logEffect(
+            enemy,
+            player,
+            'Dark Resolve',
+            COMBAT_EFFECTS.weakness()
+        );
     }
 };
 
 // Skeleton
-ENEMY_BEHAVIORS["skeleton"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['skeleton'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.6) {
         const dmg = dealBasicDamage(enemy, player);
         await dialog(`${enemy.name} slashes for ${dmg}.`);
     } else if (roll < 0.85) {
-        await logEffect(enemy, player, "Cursed Formation", COMBAT_EFFECTS.cursed());
+        await logEffect(
+            enemy,
+            player,
+            'Cursed Formation',
+            COMBAT_EFFECTS.cursed()
+        );
     } else {
         enemy.health += Math.round(enemy.max_life * 0.1);
         await dialog(`${enemy.name} reassembles — regenerates health.`);
@@ -405,13 +461,13 @@ ENEMY_BEHAVIORS["skeleton"] = async (enemy, player) => {
 };
 
 // Slime
-ENEMY_BEHAVIORS["slime"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['slime'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.6) {
         const dmg = dealBasicDamage(enemy, player);
         await dialog(`${enemy.name} slams you for ${dmg}.`);
     } else if (roll < 0.85) {
-        await logEffect(enemy, player, "Acid Splash", COMBAT_EFFECTS.poison());
+        await logEffect(enemy, player, 'Acid Splash', COMBAT_EFFECTS.poison());
     } else {
         if (enemy.health < enemy.max_life * 0.3) {
             const clone = cloneEnemy(enemy);
@@ -426,7 +482,7 @@ ENEMY_BEHAVIORS["slime"] = async (enemy, player) => {
 };
 
 // Troll
-ENEMY_BEHAVIORS["troll"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['troll'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.5) {
         const dmg = dealBasicDamage(enemy, player, 0.05);
@@ -435,17 +491,22 @@ ENEMY_BEHAVIORS["troll"] = async (enemy, player) => {
         enemy.health += Math.round(enemy.max_life * 0.05);
         await dialog(`${enemy.name} regenerates health.`);
     } else {
-        await logEffect(enemy, player, "Ground Slam", COMBAT_EFFECTS.shocked());
+        await logEffect(enemy, player, 'Ground Slam', COMBAT_EFFECTS.shocked());
     }
 };
 
 // Wicked Mage
-ENEMY_BEHAVIORS["wicked mage"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['wicked mage'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.5) {
-        await logEffect(enemy, player, "Dark Bolt", COMBAT_EFFECTS.cursed());
+        await logEffect(enemy, player, 'Dark Bolt', COMBAT_EFFECTS.cursed());
     } else if (roll < 0.8) {
-        await logEffect(enemy, player, "Wither Spell", COMBAT_EFFECTS.withering());
+        await logEffect(
+            enemy,
+            player,
+            'Wither Spell',
+            COMBAT_EFFECTS.withering()
+        );
     } else {
         const dmg = dealBasicDamage(enemy, player, 0.04);
         await dialog(`${enemy.name} casts Elemental Bolt for ${dmg}.`);
@@ -453,7 +514,7 @@ ENEMY_BEHAVIORS["wicked mage"] = async (enemy, player) => {
 };
 
 // Wind Elemental
-ENEMY_BEHAVIORS["wind elemental"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['wind elemental'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.5) {
         const dmg = dealBasicDamage(enemy, player);
@@ -462,17 +523,22 @@ ENEMY_BEHAVIORS["wind elemental"] = async (enemy, player) => {
         enemy.dodge_next = true;
         await dialog(`${enemy.name} dashes — next attack misses!`);
     } else {
-        await logEffect(enemy, player, "Harsh Winds", COMBAT_EFFECTS.blindness());
+        await logEffect(
+            enemy,
+            player,
+            'Harsh Winds',
+            COMBAT_EFFECTS.blindness()
+        );
     }
 };
 
 // Woodland Spider
-ENEMY_BEHAVIORS["woodland spider"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['woodland spider'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.5) {
-        await logEffect(enemy, player, "Bite", COMBAT_EFFECTS.poison());
+        await logEffect(enemy, player, 'Bite', COMBAT_EFFECTS.poison());
     } else if (roll < 0.8) {
-        await logEffect(enemy, player, "Web Shot", COMBAT_EFFECTS.rooted());
+        await logEffect(enemy, player, 'Web Shot', COMBAT_EFFECTS.rooted());
     } else {
         enemy.attack_speed *= 0.8;
         await dialog(`${enemy.name} skitters — speed increased!`);
@@ -480,15 +546,20 @@ ENEMY_BEHAVIORS["woodland spider"] = async (enemy, player) => {
 };
 
 // Zombie
-ENEMY_BEHAVIORS["zombie"] = async (enemy, player) => {
+ENEMY_BEHAVIORS['zombie'] = async (enemy, player) => {
     const roll = Math.random();
     if (roll < 0.6) {
         const dmg = dealBasicDamage(enemy, player);
         await dialog(`${enemy.name} slashes for ${dmg}.`);
     } else if (roll < 0.85) {
-        await logEffect(enemy, player, "Rotting Bite", COMBAT_EFFECTS.poison());
+        await logEffect(enemy, player, 'Rotting Bite', COMBAT_EFFECTS.poison());
     } else {
-        await logEffect(enemy, player, "Insidious Strike", COMBAT_EFFECTS.weakness());
+        await logEffect(
+            enemy,
+            player,
+            'Insidious Strike',
+            COMBAT_EFFECTS.weakness()
+        );
     }
 };
 
