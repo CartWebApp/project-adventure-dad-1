@@ -8,7 +8,8 @@ export default defineConfig({
     output: {
         dir: './dist',
         format: 'esm',
-        exports: 'none'
+        exports: 'none',
+        externalLiveBindings: false
     },
     plugins: [
         alias({
