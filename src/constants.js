@@ -12,6 +12,9 @@ export const LOW_HEALTH = '#cc7722';
 export const VERY_LOW_HEALTH = '#ff3333';
 export const BENCHMARKING = false;
 export const TIME_SLOWDOWN = 120;
+export const damage_reduction = 0;
+export const combat_timer = 100;
+export const stamina_regen = 10;
 export const STATES = /** @type {const} */ ({
     TRAVEL: 1,
     DIALOGUE: 2,

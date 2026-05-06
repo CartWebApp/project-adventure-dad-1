@@ -1,7 +1,6 @@
 /** @import { RaytracingRenderer } from './raytracing.js' */
 import { BaseBuilder, effects } from './combat.js';
-import { damageReduction, combatTimer } from './character.js';
-import { stamina_regen } from './character.js';
+import { combat_timer, damage_reduction, stamina_regen } from './constants.js';
 import { Image } from './objects.js';
 import { asset } from './utils.js';
 
@@ -49,10 +48,10 @@ const legendaryAttributes = {
 
 const specialAttributes = {
     common() {
-        return damageReduction * 1.1;
+        return damage_reduction * 1.1;
     },
     rare() {
-        return combatTimer * 0.9;
+        return combat_timer * 0.9;
     },
     epic() {
         return stamina_regen * 1.5;

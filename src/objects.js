@@ -11,7 +11,7 @@ import {
 import { Game } from './game.js';
 import { Entity, RaytracingRenderer } from './raytracing.js';
 import { Renderer } from './renderer.js';
-import { asset, circle } from './utils.js';
+import { circle } from './utils.js';
 
 export class Ground extends Entity {
     layer = 1;

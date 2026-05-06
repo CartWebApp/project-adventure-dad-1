@@ -8,7 +8,7 @@ import {
 } from './combat.js';
 import { Player } from './character.js';
 import { TICKS_PER_SEC } from './combat.js';
-import { clear, dialog, input, select } from './ui.js';
+import { clear, dialog, select } from './ui.js';
 import { Game } from './game.js';
 import { asset, sleep } from './utils.js';
 import { BattleGround, Image } from './objects.js';

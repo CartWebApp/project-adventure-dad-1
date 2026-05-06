@@ -3,10 +3,6 @@ import { CHARACTER_CHOICES, ORIENTATIONS } from './constants.js';
 import { Animation, Image } from './objects.js';
 import { Item, items, Spell } from './obtainables.js';
 import { asset } from './utils.js';
-export const damageReduction = 0;
-export const combatTimer = 100;
-export const stamina_regen = 10;
-
 // Character Stats and Inventory
 
 class Player {
