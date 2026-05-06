@@ -11,7 +11,7 @@ import {
 import { Game } from './game.js';
 import { Entity, RaytracingRenderer } from './raytracing.js';
 import { Renderer } from './renderer.js';
-import { circle } from './utils.js';
+import { asset, circle } from './utils.js';
 
 export class Ground extends Entity {
     layer = 1;
@@ -361,7 +361,14 @@ export class Image extends Entity {
         );
     }
 }
- 
+
+/**
+ * @param {string} src
+ */
+export function item_image(src) {
+    return new Image(asset(src), { width: 32, height: 32 });
+}
+
 export class Animation extends Entity {
     /** @type {Entity[]} */
     frames = [];
