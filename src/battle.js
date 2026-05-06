@@ -1,18 +1,18 @@
 // @ts-check
 /** @import { Effect } from './types.js' */
+/** @import { RaytracingRenderer } from './raytracing.js' */
+/** @import { Player } from './character.js' */
 import {
     BaseBuilder,
     enemies as ENEMY_POOL,
     effects as COMBAT_EFFECTS,
     Enemy
 } from './combat.js';
-import { Player } from './character.js';
 import { TICKS_PER_SEC } from './combat.js';
 import { clear, dialog, select } from './ui.js';
 import { Game } from './game.js';
-import { asset, sleep } from './utils.js';
-import { BattleGround, Image } from './objects.js';
-import { RaytracingRenderer } from './raytracing.js';
+import { sleep } from './utils.js';
+import { BattleGround } from './objects.js';
 import { spells as SPELL_DEFINITIONS } from './obtainables.js';
 
 /** @type {{EASY:'easy', MEDIUM:'medium', HARD:'hard'}} */
@@ -702,7 +702,7 @@ class Combat {
                 game.renderer.clear();
                 game.renderer.entity(new BattleGround(), 0, 0);
                 game.renderer.entity(
-                    new Image(asset('beggar/cast/1.png'), { scale: 7 }),
+                    cast_animation,
                     game.renderer.width * 0.25,
                     game.renderer.height * 0.1
                 );
