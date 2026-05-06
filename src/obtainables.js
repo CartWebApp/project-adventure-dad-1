@@ -2,7 +2,8 @@
 import { BaseBuilder, effects } from './combat.js';
 import { damageReduction, combatTimer } from './character.js';
 import { stamina_regen } from './character.js';
-import { Image, item_assets, item_image } from './objects.js';
+import { Image } from './objects.js';
+import { asset } from './utils.js';
 
 /**
  * @param {string} spellName
@@ -584,6 +585,13 @@ const potions = [
         })
         .build()
 ];
+
+/**
+ * @param {string[]} src
+ */
+function item_assets(...src) {
+    return src.map(src => new Image(asset(src), { width: 32, height: 32 }));
+}
 
 const items = [
     new ItemBuilder()
