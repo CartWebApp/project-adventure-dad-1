@@ -13,6 +13,8 @@ export class Entity {
     outline = [];
     opacity = 1;
     layer = Infinity;
+    /** Whether to only render one of this entity at any time */
+    singleton = false;
     lighting = {
         /** the brightness of the light, a number between 0 and 1 */
         level: 0,
@@ -190,7 +192,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         );
         this.#alt_frame_ctx.imageSmoothingEnabled = false;
         this.#hidden_ctx = this.#alt_frame_ctx;
-        document.body.appendChild(this.#alt_frame);
+        this.display.parentElement?.appendChild(this.#alt_frame);
         this.#background = background;
         this.#light_dissipation.set(10, 0.99);
         this.#light_dissipation.set(50, 0.995);
@@ -264,6 +266,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
         // await request_animation_frame();
         // await new Promise(resolve => requestAnimationFrame(resolve));
         this.#entities.length = 0;
+        // console.log(entities);
         try {
             await super.batch_async(async () => {
                 // console.log(this.#map);
@@ -279,10 +282,13 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                                 this.precision
                             )
                         );
+                        // console.log(e);
                     // console.log(e, this.#is_on_screen(e));
-                    if (this.#is_on_screen(e)) {
-                        await entity.render(this, x, y);
-                    }
+                    // if (this.#is_on_screen(e)) {
+                    //     console.log(e);
+                    //     await entity.render(this, x, y);
+                    // }
+                    await entity.render(this, x, y);
                     // TODO make this better
                     // we need to accurately determine whether it is safe to skip the raytracing of an entity
                     // if (entity.lighting.level === 0 && entity.lighting.absorption === 1) {
@@ -657,11 +663,24 @@ export class RaytracingRenderer extends Renderer.Offscreen {
      * @param {number} y
      */
     entity(entity, x, y) {
+        if (entity.singleton) {
+            const found = this.#map.entries().find(({ entity: e }) => e instanceof (entity.constructor));
+            if (found) {
+                this.#map.remove(found);
+                if (this.#entities.includes(found)) {
+                    this.#entities.splice(this.#entities.indexOf(found), 1);
+                }
+            }
+        }
         const e = {
             entity,
             x,
             y
         };
+        // if (!this.#is_on_screen(e)) {
+        //     console.log('wemoved :3')
+        //     return;
+        // }
         this.#entities.push(e);
         this.#entities = this.#entities.toSorted(
             (a, b) => a.entity.layer - b.entity.layer
@@ -677,6 +696,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
 
     clear() {
         this.#map.clear();
+        this.#entities.length = 0;
         super.clear();
     }
 }

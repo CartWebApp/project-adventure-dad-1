@@ -225,6 +225,17 @@ export class InterpolatingEntityMap {
         this.#entities.push(entity);
     }
 
+    /**
+     * @param {{ x: number; y: number; entity: Entity }} entry
+     */
+    remove(entry) {
+        if (!this.#entities.includes(entry)) {
+            console.log('whomp whomp');
+            return;
+        }
+        this.#entities.splice(this.#entities.indexOf(entry), 1);
+    }
+
     *entries() {
         for (const entity of this.#entities) {
             yield entity;

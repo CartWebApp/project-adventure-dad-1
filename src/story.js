@@ -13,7 +13,7 @@ import { clear, dialog, health, input, select, status_bar } from './ui.js';
 import { CombatBuilder, pickEnemiesForDifficulty } from './battle.js';
 import { items, spells, potions, getArmorForRarity } from './obtainables.js';
 import { asset, interpolate, sleep } from './utils.js';
-import { Ground, Image, Moon, Sun } from './objects.js';
+import { Ground, Image, Moon, Sun, TallGround } from './objects.js';
 
 /**
  * Base class for story building purposes.
@@ -720,6 +720,10 @@ localStorage.name ??= '';
 //         return random < 1 ? 0 : 1;
 //     }).with_branches(new BattleEncounter(DIFFICULTY.MEDIUM), null)
 // ).with_delay(100),
+const cobblestone = new Image(
+    asset('background/cobblestone.png'),
+    { width: 16, height: 16, scale: 2 }
+);
 export const story = new Parallel(
     new Input('Choose a name.')
         .with_validator(
@@ -811,19 +815,18 @@ export const story = new Parallel(
     .then(
         new Parallel(
             new Execute(async ({ renderer, player }) => {
-                await renderer.batch(() => {
-                    renderer.clear();
-                    const cobblestone = new Image(
-                        asset('background/cobblestone.png'),
-                        { width: 16, height: 16, scale: 1 }
-                    );
-                    // await cobblestone.promise;
-                    renderer.entity(new Ground(), 0, 0);
-                    for (let x = 0; x < renderer.width; x += 32) {
+                await renderer.batch(async () => {
+                    // renderer.clear();
+                    renderer.entity(new TallGround(), 0, 0);
+                    await cobblestone.promise;
+                    // for (let i = 0; i < 100; i++) {
+                    //     renderer.entity(cobblestone, renderer.width * (i / 100), renderer.height * (i / 100));
+                    // }
+                    for (let x = 0; x < renderer.width; x+=32) {
                         for (
-                            let y = renderer.height * 0.6;
-                            y < renderer.height * 0.825;
-                            y += 32
+                            let y = renderer.height * 0.55;
+                            y < renderer.height * 0.65;
+                            y+=32
                         ) {
                             renderer.entity(cobblestone, x, y);
                         }
@@ -863,7 +866,6 @@ export const story = new Parallel(
             // DO NOT PUT ANYTHING ELSE HERE, YOU WILL LITERALLY STOP TIME ITSELF
             new Loop(async game => {
                 await Promise.resolve();
-                game.renderer.clear();
                 game.time++;
                 game.renderer.refresh();
                 game.save();
