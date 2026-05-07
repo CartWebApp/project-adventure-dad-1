@@ -224,24 +224,6 @@ ENEMY_BEHAVIORS['bandit'] = async (enemy, player) => {
     }
 };
 
-// Basilisk
-ENEMY_BEHAVIORS['basilisk'] = async (enemy, player) => {
-    const roll = Math.random();
-    if (roll < 0.5) {
-        const dmg = dealBasicDamage(enemy, player, 0.04);
-        await dialog(`${enemy.name} whips its tail for ${dmg} damage.`);
-    } else if (roll < 0.8) {
-        await logEffect(enemy, player, 'Bite', COMBAT_EFFECTS.poison(1));
-    } else {
-        await logEffect(
-            enemy,
-            player,
-            'Petrifying Gaze',
-            COMBAT_EFFECTS.petrified()
-        );
-    }
-};
-
 // Beserker
 ENEMY_BEHAVIORS['beserker'] = async (enemy, player) => {
     const missing = 1 - enemy.health / enemy.max_health;
@@ -529,19 +511,6 @@ ENEMY_BEHAVIORS['wind elemental'] = async (enemy, player) => {
             'Harsh Winds',
             COMBAT_EFFECTS.blindness()
         );
-    }
-};
-
-// Woodland Spider
-ENEMY_BEHAVIORS['woodland spider'] = async (enemy, player) => {
-    const roll = Math.random();
-    if (roll < 0.5) {
-        await logEffect(enemy, player, 'Bite', COMBAT_EFFECTS.poison());
-    } else if (roll < 0.8) {
-        await logEffect(enemy, player, 'Web Shot', COMBAT_EFFECTS.rooted());
-    } else {
-        enemy.attack_speed *= 0.8;
-        await dialog(`${enemy.name} skitters — speed increased!`);
     }
 };
 

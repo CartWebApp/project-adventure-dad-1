@@ -394,16 +394,6 @@ const enemies = [
         .build(),
 
     new EnemyBuilder()
-        .with_name('Basilisk')
-        .with_description('Mythical serpent whose gaze turns victims to stone')
-        .with_health_range([81, 140])
-        .with_attack_speed_range([3.5, 5])
-        .with_primary_attack('Tail Whip (Basic damage)')
-        .with_secondary_attack('Bite (Poison)')
-        .with_tertiary_attack('Petrifying Gaze (Petrified)')
-        .build(),
-
-    new EnemyBuilder()
         .with_name('Beserker')
         .with_description('Frenzied warrior that grows stronger as it fights')
         .with_health_range([81, 140])
@@ -562,16 +552,6 @@ const enemies = [
         .with_primary_attack('Quick Gust (Basic damage)')
         .with_secondary_attack('Wind Dash (+25% dodge chance)')
         .with_tertiary_attack('Harsh Winds (-15% accuracy)')
-        .build(),
-
-    new EnemyBuilder()
-        .with_name('Woodland Spider')
-        .with_description('Giant spider lurking in forests')
-        .with_health_range([41, 80])
-        .with_attack_speed_range([2.5, 3.5])
-        .with_primary_attack('Bite (Poison)')
-        .with_secondary_attack('Web Shot (Rooted)')
-        .with_tertiary_attack('Skitter (speed boost)')
         .build(),
 
     new EnemyBuilder()
