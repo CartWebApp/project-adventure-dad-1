@@ -7,7 +7,8 @@ import {
     Encounter,
     GiveItemByName,
     GiveSpellByName,
-    EncounterWith
+    EncounterWith,
+    ChoiceUntil
 } from './story.js';
 import { DIFFICULTY } from './constants.js';
 import { items, potions } from './obtainables.js';
@@ -59,7 +60,7 @@ export function BeggarStory() {
 
             // MARKET SHOPS
             .then(
-                Choice('Where do you shop?', [
+                ChoiceUntil('Where do you shop?', leave => [
                     {
                         text: 'Blacksmith',
                         next: Shop('Blacksmith', items.slice(0, 10))
@@ -71,7 +72,7 @@ export function BeggarStory() {
                     },
                     {
                         text: 'Leave town',
-                        next: new Dialog('You head into the forest.')
+                        next: new Dialog('You head into the forest.').then(leave)
                     }
                 ])
             )
@@ -120,7 +121,7 @@ export function BeggarStory() {
                     new Dialog(
                         'You finally beat the final monster guarding the treasure and obtained what you seek... As you go back home you see a small trinket where you left that knight... When returning to your “mentor” you find that all he wanted was the money and as you feel his dagger slide out suddenly, the random ring you found triggers causing you to come back to life...'
                     )
-                        .then(EncounterWith("assassin", DIFFICULTY.HARD))
+                        .then(EncounterWith('assassin', DIFFICULTY.HARD))
                         .then(
                             new Dialog(
                                 'As you stand upon your supposed mentors corpse you find peace in your new life, as you venture out to this whole new world with more than you ever had before.'

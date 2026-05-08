@@ -1,3 +1,5 @@
+import { Animation, Image } from './objects';
+
 export type EnemyBuilderData = {
     name: string;
     description: string;
@@ -11,7 +13,9 @@ export type EnemyBuilderData = {
     secondary_attack: string | null;
     tertiary_attack: string | null;
     seed: number;
-}
+    assets: Image[];
+    attack_animation: Animation;
+};
 
 export interface Effect {
     name: string;

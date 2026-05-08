@@ -112,8 +112,11 @@ class Branch extends Step {
      */
     with_branches(...branches) {
         this.branches = branches.map(branch =>
-            branch !== null ? /** @type {Step} */ (find_root(branch)) : new Execute(() => {})
+            branch !== null
+                ? /** @type {Step} */ (find_root(branch))
+                : new Execute(() => {})
         );
+        console.log(this.branches, branches);
         for (const branch of this.branches) {
             branch.parent = this;
         }
@@ -516,7 +519,7 @@ class Dialog extends Step {
      */
     async execute(game) {
         await dialog(this.dialog, this.render_icon, this.per_letter_duration);
-
+        console.log(this.next);
         // if (!this.choices || this.choices.length === 0) return;
 
         // const labels = this.choices.map(/** @param {choice} c */ c => c.text);
@@ -632,7 +635,8 @@ class LoopedGroup extends Loop {
      * @param {Step} step
      */
     constructor(step) {
-        super(async game => await step.execute(game));
+        const root = /** @type {Step} */ (find_root(step));
+        super(async game => await root.execute(game));
     }
 }
 
@@ -729,60 +733,85 @@ class Render extends Step {
 }
 
 /**
- * @param {*} dialogText
- * @param {*} choices
+ * @param {string} text
+ * @param {Array<{ text: string; align?: number; next: Step }>} choices
  * @returns {Step}
  */
-function Choice(dialogText, choices) {
-    // return new Dialog(dialogText);
-    return new Dialog(dialogText).then(
-        new Branch(async _game => {
-            const labels = choices.map(/** @param {*} c */ c => c.text);
-            const selected = await select(dialogText, labels);
-            return labels.indexOf(selected);
-        }).with_branches(
-            ...choices.map(
-                /** @param {*} c */ c => {
-                    const step = c.next;
-                    return new Execute(game => {
-                        if (c.align !== null && c.align !== undefined) {
-                            game.player.alignment = c.align;
-                        }
-                    }).then(step);
+function Choice(text, choices) {
+    return new Branch(async () => {
+        const labels = choices.map(({ text }) => text);
+        const selected = await select(text, labels);
+        return labels.indexOf(selected);
+    }).with_branches(
+        ...choices.map(({ align, next }) => {
+            return new Execute(game => {
+                if (align !== null && align !== undefined) {
+                    game.player.alignment = align;
                 }
-            )
-        )
+            }).then(next);
+        })
     );
 }
 
 /**
- * @param {*} title
+ * @param {string} text
+ * @param {(leave: Step) => Array<{ text: string; align?: number; next: Step }>} get_choices
+ */
+export function ChoiceUntil(text, get_choices) {
+    let end = false;
+    const leave = new Execute(() => {
+        end = true;
+    });
+    const choices = get_choices(leave);
+    const branch = new Branch(async () => {
+        const labels = choices.map(({ text }) => text);
+        const selected = await select(text, labels);
+        return labels.indexOf(selected);
+    }).with_branches(
+        ...choices.map(({ align, next }) => {
+            return new Execute(game => {
+                if (align !== null && align !== undefined) {
+                    game.player.alignment = align;
+                }
+            }).then(next);
+        })
+    );
+    return new LoopedGroup(
+        new Execute(async game => {
+            /** @type {Step | null} */
+            let step = branch;
+            while (step !== null) {
+                await step.execute(game);
+                step = step.next;
+            }
+        })
+    ).until(() => end);
+}
+
+/**
+ * @param {string} title
  * @param {*} inventory
  * @returns {Step}
  */
 function Shop(title, inventory) {
-    return new Dialog(title).then(
-        new Branch(async _game => {
-            const labels = inventory.map(
-                /** @param {*} i */ i => `${i.name} — ${i.value}c`
-            );
-            labels.push('Leave shop');
-            const selected = await select(title, labels);
-            return labels.indexOf(selected);
-        }).with_branches(
-            ...inventory.map(
-                /** @param {*} item */ item =>
-                    new Execute(game => {
-                        if ((game.player.money || 0) >= item.value) {
-                            game.player.money -= item.value;
-                            game.player.inventory.push(
-                                JSON.parse(JSON.stringify(item))
-                            );
-                        }
-                    }).then(new Dialog('You continue shopping.'))
-            ),
-            new Dialog('You leave the shop.')
-        )
+    return new Branch(async () => {
+        const labels = inventory.map(
+            /** @param {*} i */ i => `${i.name} — ${i.value}c`
+        );
+        labels.push('Leave shop');
+        const selected = await select(title, labels);
+        return labels.indexOf(selected);
+    }).with_branches(
+        ...inventory.map(
+            /** @param {*} item */ item =>
+                new Execute(game => {
+                    if ((game.player.money || 0) >= item.value) {
+                        game.player.money -= item.value;
+                        game.player.inventory.push(structuredClone(item));
+                    }
+                }).then(new Dialog('You continue shopping.'))
+        ),
+        new Dialog('You leave the shop.')
     );
 }
 
@@ -817,7 +846,7 @@ function GiveItemByName(name) {
         const reward = items.find(i => i.name === name);
         if (!reward) return;
         game.player.inventory = game.player.inventory || [];
-        game.player.inventory.push(JSON.parse(JSON.stringify(reward)));
+        game.player.inventory.push(structuredClone(reward));
     });
 }
 
@@ -857,7 +886,7 @@ function GiveItemByRarity(rarity) {
         const reward = pool[Math.floor(Math.random() * pool.length)];
 
         game.player.inventory = game.player.inventory || [];
-        game.player.inventory.push(JSON.parse(JSON.stringify(reward)));
+        game.player.inventory.push(structuredClone(reward));
     });
 }
 
@@ -871,7 +900,7 @@ function GiveSpellByName(name) {
         if (!spell) return;
 
         game.player.spells = game.player.spells || [];
-        game.player.spells.push(JSON.parse(JSON.stringify(spell)));
+        game.player.spells.push(structuredClone(spell));
     });
 }
 
@@ -976,73 +1005,69 @@ export const story = new Parallel(
         })
     )
     .then(
-        new Parallel(
-            new Branch(({ player }) =>
-                player.character === CHARACTER_CHOICES.KNIGHT
-                    ? 0
-                    : player.character === CHARACTER_CHOICES.SLAVE
-                    ? 1
-                    : 2
-            ).with_branches(KnightStory(), SlaveStory(), BeggarStory()),
-            // new Execute(async ({ renderer, player }) => {
-            //     await renderer.batch(async () => {
-            //         // renderer.clear();
-            //         renderer.entity(new TallGround(), 0, 0);
-            //         await cobblestone.promise;
-            //         // for (let i = 0; i < 100; i++) {
-            //         //     renderer.entity(cobblestone, renderer.width * (i / 100), renderer.height * (i / 100));
-            //         // }
-            //         for (let x = 0; x < renderer.width; x += 32) {
-            //             for (
-            //                 let y = renderer.height * 0.55;
-            //                 y < renderer.height * 0.65;
-            //                 y += 32
-            //             ) {
-            //                 renderer.entity(cobblestone, x, y);
-            //             }
-            //         }
-            //     });
-            // }),
-            // new Dialog('You awaken to the sound of someone calling your name')
-            //                 .with_overall_duration(2000)
-            //                 .then(
-            //                     new Parallel(
+        // new Parallel(
+        new Branch(({ player }) =>
+            player.character === CHARACTER_CHOICES.KNIGHT
+                ? 0
+                : player.character === CHARACTER_CHOICES.SLAVE
+                ? 1
+                : 2
+        ).with_branches(KnightStory(), SlaveStory(), BeggarStory())
+        // new Execute(async ({ renderer, player }) => {
+        //     await renderer.batch(async () => {
+        //         // renderer.clear();
+        //         renderer.entity(new TallGround(), 0, 0);
+        //         await cobblestone.promise;
+        //         // for (let i = 0; i < 100; i++) {
+        //         //     renderer.entity(cobblestone, renderer.width * (i / 100), renderer.height * (i / 100));
+        //         // }
+        //         for (let x = 0; x < renderer.width; x += 32) {
+        //             for (
+        //                 let y = renderer.height * 0.55;
+        //                 y < renderer.height * 0.65;
+        //                 y += 32
+        //             ) {
+        //                 renderer.entity(cobblestone, x, y);
+        //             }
+        //         }
+        //     });
+        // }),
+        // new Dialog('You awaken to the sound of someone calling your name')
+        //                 .with_overall_duration(2000)
+        //                 .then(
+        //                     new Parallel(
 
-            //                     )
-            // ),
-            // new Branch(game => game.player.character === CHARACTER_CHOICES.KNIGHT ? 0 : game.player.character === CHARACTER_CHOICES.SLAVE ? 1 : 2)
-            //     .with_branches(
-            //         new Step(),
-            //         new Step(),
-            //             new Dialog('You awaken to the sound of someone calling your name')
-            //                 .with_overall_duration(2000)
-            //                 .then(
-            //                     new Parallel(
-            //                         new Render(async ({ renderer, player }) => {
-            //                             await renderer.batch(() => {
-            //                                 const cobblestone = new Image(asset('background/cobblestone.png'), { width: 16, height: 16, scale: 2 });
-            //                                 for (let x = 0; x < renderer.width; x += 32) {
-            //                                     for (let y = renderer.height * 0.75; y < renderer.height * 0.825; y += 32) {
-            //                                         renderer.entity(cobblestone, x, y);
-            //                                     }
-            //                                 }
-            //                             });
-            //                         },
-            //                         game => sleep(2000))
-            //                     )
-            //                 )
-            //     ),
-            // This loop is the way that time works
-            // DO NOT PUT ANYTHING ELSE HERE, YOU WILL LITERALLY STOP TIME ITSELF
-            new Loop(async game => {
-                await Promise.resolve();
-                game.time++;
-                game.renderer.refresh();
-                game.save();
-                await sleep(100);
-            })
-        )
+        //                     )
+        // ),
+        // new Branch(game => game.player.character === CHARACTER_CHOICES.KNIGHT ? 0 : game.player.character === CHARACTER_CHOICES.SLAVE ? 1 : 2)
+        //     .with_branches(
+        //         new Step(),
+        //         new Step(),
+        //             new Dialog('You awaken to the sound of someone calling your name')
+        //                 .with_overall_duration(2000)
+        //                 .then(
+        //                     new Parallel(
+        //                         new Render(async ({ renderer, player }) => {
+        //                             await renderer.batch(() => {
+        //                                 const cobblestone = new Image(asset('background/cobblestone.png'), { width: 16, height: 16, scale: 2 });
+        //                                 for (let x = 0; x < renderer.width; x += 32) {
+        //                                     for (let y = renderer.height * 0.75; y < renderer.height * 0.825; y += 32) {
+        //                                         renderer.entity(cobblestone, x, y);
+        //                                     }
+        //                                 }
+        //                             });
+        //                         },
+        //                         game => sleep(2000))
+        //                     )
+        //                 )
+        //     ),
+        // // This loop is the way that time works
+        // // DO NOT PUT ANYTHING ELSE HERE, YOU WILL LITERALLY STOP TIME ITSELF
+        // new Loop(async game => {
+        // })
+        // )
     );
+// );
 
 export {
     Execute,

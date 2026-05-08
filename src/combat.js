@@ -1,6 +1,10 @@
 // @ts-check
 /** @import { Effect, EnemyBuilderData } from './types.js' */
 /// <reference lib="es2023" />
+
+import { Animation, Image } from './objects.js';
+import { asset } from './utils.js';
+
 /**
  * @template {Record<string, unknown>} T
  * @template V
@@ -248,6 +252,8 @@ export class Enemy extends Entity {
     primary_attack;
     secondary_attack;
     tertiary_attack;
+    assets = [];
+    attack_animation;
     /**
      * @param {EnemyBuilderData} param
      */
@@ -258,7 +264,9 @@ export class Enemy extends Entity {
         attack_speed = 0,
         primary_attack = '',
         secondary_attack = '',
-        tertiary_attack = ''
+        tertiary_attack = '',
+        assets = [],
+        attack_animation
     }) {
         super();
         this.name = name;
@@ -268,6 +276,8 @@ export class Enemy extends Entity {
         this.primary_attack = primary_attack;
         this.secondary_attack = secondary_attack;
         this.tertiary_attack = tertiary_attack;
+        this.assets = assets;
+        this.attack_animation = attack_animation;
     }
 }
 
@@ -298,10 +308,8 @@ class EnemyBuilder
             let baseFactor;
             if (healthVal > 140)
                 baseFactor = 0.06; // very large enemies regen faster
-            else if (healthVal > 80)
-                baseFactor = 0.04; // large
-            else if (healthVal > 40)
-                baseFactor = 0.03; // medium
+            else if (healthVal > 80) baseFactor = 0.04; // large
+            else if (healthVal > 40) baseFactor = 0.03; // medium
             else baseFactor = 0.02; // small
 
             // overrides for special cases
@@ -362,13 +370,23 @@ class EnemyBuilder
             'attack_speed_strategy',
             'primary_attack',
             'secondary_attack',
-            'tertiary_attack'
+            'tertiary_attack',
+            'assets'
         );
         this.data.seed =
             Math.floor(Date.now() % 2147483647) ^
             Math.floor(Math.random() * 0xffffffff) ^
             EnemyBuilder._instanceCounter++;
     }
+}
+
+/**
+ * @param {string[]} src
+ */
+function enemy_images(...src) {
+    return src.map(
+        src => new Image(asset(`enemies/${src}`), { width: 92, height: 92 })
+    );
 }
 
 // create instances using builders
@@ -381,6 +399,7 @@ const enemies = [
         .with_primary_attack('Backstab (Basic damage)')
         .with_secondary_attack('Poison Blade (Poison)')
         .with_tertiary_attack('Vanish (becomes untargetable briefly)')
+        .with_assets(enemy_images('assassin/south-west.png'))
         .build(),
 
     new EnemyBuilder()
@@ -394,7 +413,7 @@ const enemies = [
         .build(),
 
     new EnemyBuilder()
-        .with_name('Beserker')
+        .with_name('Berserker')
         .with_description('Frenzied warrior that grows stronger as it fights')
         .with_health_range([81, 140])
         .with_attack_speed_strategy('scalesWithHealth')
@@ -405,7 +424,7 @@ const enemies = [
 
     new EnemyBuilder()
         .with_name('Doppelgänger')
-        .with_description('Mimics the player\'s abilities')
+        .with_description("Mimics the player's abilities")
         .with_health_range([41, 80])
         .with_attack_speed_strategy('matchPlayer')
         .with_primary_attack('Mirror Strike (copies last move)')
@@ -565,13 +584,13 @@ const enemies = [
         .build()
 ];
 /**
- * @param {*} name 
- * @returns 
+ * @param {*} name
+ * @returns
  */
 export function createEnemyByName(name) {
     const template = enemies.find(e => e.name === name);
     if (!template) throw new Error(`Enemy not found: ${name}`);
-    return JSON.parse(JSON.stringify(template));
+    return structuredClone(template);
 }
 
 export { effects, enemies, TICKS_PER_SEC };

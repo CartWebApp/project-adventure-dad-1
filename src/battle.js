@@ -11,8 +11,8 @@ import {
 import { TICKS_PER_SEC } from './combat.js';
 import { clear, dialog, select } from './ui.js';
 import { Game } from './game.js';
-import { sleep } from './utils.js';
-import { BattleGround } from './objects.js';
+import { asset, sleep } from './utils.js';
+import { BattleGround, Image } from './objects.js';
 import { spells as SPELL_DEFINITIONS } from './obtainables.js';
 import { DIFFICULTY } from './constants.js';
 
@@ -1048,6 +1048,13 @@ class Combat {
             const game = Game.current;
             const cast_animation = player.cast_animation;
             cast_animation.reset();
+            /** @type {Enemy[]} */
+            const enemies = this.enemies || [];
+            const enemy_names = enemies.map(enemy => enemy.name);
+            const enemy_images = enemies.map(enemy => new Image(asset(`enemies/${enemy.name.toLowerCase().replace(/ /g, '_').replace(/ä/g, 'a')}/south-west.png`), { width: 92, height: 92, scale: 4 }));
+            for (const image of enemy_images) {
+                image.layer = 2;
+            }
             await game.renderer.batch(() => {
                 game.renderer.clear();
                 game.renderer.entity(new BattleGround(), 0, 0);
@@ -1056,17 +1063,11 @@ class Combat {
                     game.renderer.width * 0.25,
                     game.renderer.height * 0.1
                 );
-                // game.renderer.entity(
-                //     cast_animation,
-                //     // player.get_entity(ORIENTATIONS.NORTHEAST, 10),
-                //     game.renderer.width * 0.1,
-                //     game.renderer.height * 0.1
-                // );
+                for (let i = 0; i < enemy_images.length; i++) {
+                    const x = game.renderer.width * ((i / enemy_images.length) * 0.3 + 0.5);
+                    game.renderer.entity(enemy_images[i], x, game.renderer.height * 0.15);
+                }
             });
-            /** @type {Enemy[]} */
-            const enemies = this.enemies || [];
-            const enemy_names = enemies.map(enemy => enemy.name);
-            console.log(enemies);
             /**
              * @param {string[]} enemy_names
              */
@@ -1179,6 +1180,10 @@ class Combat {
                                             game.renderer.width * 0.25,
                                             game.renderer.height * 0.1
                                         );
+                                        for (let i = 0; i < enemy_images.length; i++) {
+                                            const x = game.renderer.width * ((i / enemy_images.length) * 0.3 + 0.5);
+                                            game.renderer.entity(enemy_images[i], x, game.renderer.height * 0.15);
+                                        }
                                         await spell?.render_effect?.(
                                             game.renderer,
                                             cast_animation.state /
