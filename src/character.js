@@ -7,6 +7,8 @@ import { asset } from './utils.js';
 
 class Player {
     name;
+    /** @type {number} */
+    alignment;
     max_life;
     /** @type {number} */
     #health;
@@ -53,6 +55,7 @@ class Player {
     constructor(name, character) {
         this.name = name;
         this.character = character;
+        this.alignment = 2; // 1 = positive, 2 = neutral, 3 = negative
         // defaults
         this.max_life = 100;
         this.#health = this.max_life;
@@ -92,8 +95,8 @@ class Player {
             this.character === CHARACTER_CHOICES.BEGGAR
                 ? 'beggar'
                 : this.character === CHARACTER_CHOICES.SLAVE
-                ? 'slave'
-                : 'knight';
+                  ? 'slave'
+                  : 'knight';
         this.cast_animation = new Animation(
             ...Array(this.character === CHARACTER_CHOICES.SLAVE ? 7 : 8)
                 .fill(0)
@@ -158,8 +161,8 @@ class Player {
                     this.character === CHARACTER_CHOICES.BEGGAR
                         ? 'beggar'
                         : this.character === CHARACTER_CHOICES.SLAVE
-                        ? 'slave'
-                        : 'knight'
+                          ? 'slave'
+                          : 'knight'
                 }/${orientation}.png`
             ),
             { scale }

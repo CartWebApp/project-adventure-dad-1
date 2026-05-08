@@ -405,7 +405,7 @@ const enemies = [
 
     new EnemyBuilder()
         .with_name('Doppelgänger')
-        .with_description('Mimics the player’s abilities')
+        .with_description('Mimics the player\'s abilities')
         .with_health_range([41, 80])
         .with_attack_speed_strategy('matchPlayer')
         .with_primary_attack('Mirror Strike (copies last move)')
@@ -564,5 +564,14 @@ const enemies = [
         .with_tertiary_attack('Insidious Strike (Weakness)')
         .build()
 ];
+/**
+ * @param {*} name 
+ * @returns 
+ */
+export function createEnemyByName(name) {
+    const template = enemies.find(e => e.name === name);
+    if (!template) throw new Error(`Enemy not found: ${name}`);
+    return JSON.parse(JSON.stringify(template));
+}
 
 export { effects, enemies, TICKS_PER_SEC };

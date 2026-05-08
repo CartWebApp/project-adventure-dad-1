@@ -7,7 +7,7 @@ import {
     TREE_TRUNK_COLOR,
     TREE_TRUNK_HEIGHT,
     TREE_TRUNK_WIDTH,
-    TREE_WIDTH,
+    TREE_WIDTH
 } from './constants.js';
 import { Entity, RaytracingRenderer } from './raytracing.js';
 import { pixelator } from './utils.js';
@@ -114,7 +114,7 @@ function generate_tree_slice(
     x,
     range = {
         start: -(renderer.width / 2) - 800,
-        end: renderer.width / 2 + 800,
+        end: renderer.width / 2 + 800
     }
 ) {
     const res = [];
@@ -140,14 +140,14 @@ function generate_tree_slice(
         if (gen > 1) {
             res.push({
                 x: (last_x = i + range.end),
-                height: gen,
+                height: gen
             });
         }
     }
     // console.log(res);
     tree_ranges.push({
         start: x - Math.abs(range.start),
-        end: x + Math.abs(range.end),
+        end: x + Math.abs(range.end)
     });
     return res;
 }
@@ -187,7 +187,7 @@ const aspect_ratio = renderer.width / renderer.height;
 function circle(radius, step = 1) {
     let center = {
         x: radius,
-        y: radius,
+        y: radius
     };
     const points = [];
     for (let i = 0; i < 360; i += step) {
@@ -196,7 +196,7 @@ function circle(radius, step = 1) {
         const y = center.y + radius * Math.sin(angle);
         points.push({
             x,
-            y,
+            y
         });
     }
     // console.log({ points });
@@ -211,7 +211,7 @@ class Sun extends Entity {
         spread: Math.max(renderer.width, renderer.height) * 0.9,
         start_angle: 0,
         end_angle: 360,
-        absorption: 0,
+        absorption: 0
     };
     layer = 10;
     /**
@@ -237,32 +237,32 @@ class StandardTree extends Entity {
     outline = [
         {
             x: TREE_TRUNK_WIDTH + TREE_WIDTH / 2,
-            y: renderer.height * 0.75,
+            y: renderer.height * 0.75
         },
         {
             x: TREE_WIDTH / 2,
-            y: renderer.height * 0.75,
+            y: renderer.height * 0.75
         },
         {
             x: TREE_WIDTH / 2,
-            y: renderer.height * 0.75 - TREE_TRUNK_HEIGHT,
+            y: renderer.height * 0.75 - TREE_TRUNK_HEIGHT
         },
         {
             x: 0,
-            y: renderer.height * 0.75 - TREE_TRUNK_HEIGHT,
+            y: renderer.height * 0.75 - TREE_TRUNK_HEIGHT
         },
         {
             x: TREE_TRUNK_WIDTH / 2 + TREE_WIDTH / 2,
-            y: renderer.height * 0.75 - (TREE_HEIGHT + TREE_TRUNK_HEIGHT),
+            y: renderer.height * 0.75 - (TREE_HEIGHT + TREE_TRUNK_HEIGHT)
         },
         {
             x: TREE_WIDTH + TREE_WIDTH / 2,
-            y: renderer.height * 0.75 - TREE_TRUNK_HEIGHT,
+            y: renderer.height * 0.75 - TREE_TRUNK_HEIGHT
         },
         {
             x: TREE_TRUNK_WIDTH + TREE_WIDTH / 2,
-            y: renderer.height * 0.75 - TREE_TRUNK_HEIGHT,
-        },
+            y: renderer.height * 0.75 - TREE_TRUNK_HEIGHT
+        }
     ];
     /**
      * @param {RaytracingRenderer} renderer
@@ -280,15 +280,15 @@ class StandardTree extends Entity {
         renderer.polygon(
             {
                 x,
-                y: renderer.height * 0.75 - TREE_TRUNK_HEIGHT,
+                y: renderer.height * 0.75 - TREE_TRUNK_HEIGHT
             },
             {
                 x: x + TREE_WIDTH / 2,
-                y: renderer.height * 0.75 - (TREE_HEIGHT + TREE_TRUNK_HEIGHT),
+                y: renderer.height * 0.75 - (TREE_HEIGHT + TREE_TRUNK_HEIGHT)
             },
             {
                 x: x + TREE_WIDTH,
-                y: renderer.height * 0.75 - TREE_TRUNK_HEIGHT,
+                y: renderer.height * 0.75 - TREE_TRUNK_HEIGHT
             }
         );
     }
@@ -429,20 +429,20 @@ class Ground extends Entity {
     outline = [
         {
             x: 0,
-            y: renderer.height * 0.75,
+            y: renderer.height * 0.75
         },
         {
             x: renderer.width,
-            y: renderer.height * 0.75,
+            y: renderer.height * 0.75
         },
         {
             x: renderer.width,
-            y: renderer.height,
+            y: renderer.height
         },
         {
             x: 0,
-            y: renderer.height,
-        },
+            y: renderer.height
+        }
     ];
 
     layer = 4;

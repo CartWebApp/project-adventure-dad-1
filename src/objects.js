@@ -141,11 +141,7 @@ export class Moon extends Entity {
     lighting = {
         level: 0.25,
         hue: /** @type {[number, number, number]} */ ([250, 250, 250]),
-        spread:
-            Math.max(
-                renderer.width,
-                renderer.height
-            ) * 0.9,
+        spread: Math.max(renderer.width, renderer.height) * 0.9,
         start_angle: 0,
         end_angle: 360,
         absorption: 0
@@ -176,11 +172,7 @@ export class Sun extends Entity {
     lighting = {
         level: 0.25,
         hue: /** @type {[number, number, number]} */ ([250, 250, 120]),
-        spread:
-            Math.max(
-                renderer.width,
-                renderer.height
-            ) * 0.9,
+        spread: Math.max(renderer.width, renderer.height) * 0.9,
         start_angle: 0,
         end_angle: 360,
         absorption: 0
@@ -220,9 +212,7 @@ export class Tree extends Entity {
         },
         {
             x: TREE_TRUNK_WIDTH / 2 + TREE_WIDTH / 2,
-            y:
-                renderer.height * 0.75 -
-                (TREE_HEIGHT + TREE_TRUNK_HEIGHT)
+            y: renderer.height * 0.75 - (TREE_HEIGHT + TREE_TRUNK_HEIGHT)
         },
         {
             x: TREE_WIDTH + TREE_WIDTH / 2,
@@ -268,7 +258,9 @@ export class Tree extends Entity {
 }
 
 const canvas = document.createElement('canvas');
-const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d', { willReadFrequently: true }));
+const ctx = /** @type {CanvasRenderingContext2D} */ (
+    canvas.getContext('2d', { willReadFrequently: true })
+);
 
 /**
  * @param {HTMLImageElement} image
@@ -491,7 +483,9 @@ export class Polygon extends Entity {
     async render(renderer, x, y) {
         console.log(this);
         this.prelude(renderer);
-        renderer.polygon(...this.outline.map(point => ({ x: point.x + x, y: point.y + y })));
+        renderer.polygon(
+            ...this.outline.map(point => ({ x: point.x + x, y: point.y + y }))
+        );
     }
 }
 

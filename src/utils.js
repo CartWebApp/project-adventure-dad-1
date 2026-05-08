@@ -114,7 +114,7 @@ export function sleep(ms) {
 }
 
 /**
- * Returns the correct path for an asset, regardless 
+ * Returns the correct path for an asset, regardless
  * of whether you're in development or production.
  * @param {string} path
  */

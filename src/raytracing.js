@@ -282,7 +282,7 @@ export class RaytracingRenderer extends Renderer.Offscreen {
                                 this.precision
                             )
                         );
-                        // console.log(e);
+                    // console.log(e);
                     // console.log(e, this.#is_on_screen(e));
                     // if (this.#is_on_screen(e)) {
                     //     console.log(e);
@@ -664,7 +664,9 @@ export class RaytracingRenderer extends Renderer.Offscreen {
      */
     entity(entity, x, y) {
         if (entity.singleton) {
-            const found = this.#map.entries().find(({ entity: e }) => e instanceof (entity.constructor));
+            const found = this.#map
+                .entries()
+                .find(({ entity: e }) => e instanceof entity.constructor);
             if (found) {
                 this.#map.remove(found);
                 if (this.#entities.includes(found)) {

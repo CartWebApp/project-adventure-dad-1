@@ -103,8 +103,14 @@ class Renderer {
                 /** @type {any} */ (Renderer.#get_handler(this))
             );
             display.addEventListener('mousemove', event => {
-                const x = ((event.clientX - display.offsetLeft) / display.clientWidth) * this.width;
-                const y = ((event.clientY - display.offsetTop) / display.clientHeight) * this.height;
+                const x =
+                    ((event.clientX - display.offsetLeft) /
+                        display.clientWidth) *
+                    this.width;
+                const y =
+                    ((event.clientY - display.offsetTop) /
+                        display.clientHeight) *
+                    this.height;
 
                 this.#mouse_x = x;
                 this.#mouse_y = y;

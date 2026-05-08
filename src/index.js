@@ -29,7 +29,8 @@ const renderer = new RaytracingRenderer(
     canvas,
     display,
     renderer => {
-        const time = Math.sin(game.time / TIME_SLOWDOWN + Math.PI * 0.2) / 2 + 0.5;
+        const time =
+            Math.sin(game.time / TIME_SLOWDOWN + Math.PI * 0.2) / 2 + 0.5;
         const r = interpolate(135, 0, time);
         const g = interpolate(206, 0, time);
         const b = interpolate(235, 0, time);

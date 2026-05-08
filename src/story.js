@@ -1,6 +1,6 @@
 /** @import { Game } from './game.js' */
 import { Player } from './character.js';
-import { Entity } from './combat.js';
+import { Entity, createEnemyByName } from './combat.js';
 import {
     CHARACTER_CHOICES,
     DIFFICULTY,
@@ -148,17 +148,23 @@ class Execute extends Step {
 
 class BattleEncounter extends Step {
     state = STATES.BATTLE;
-    difficulty;
+
+    /** @type {{
+     *   type: "random" | "specific",
+     *   difficulty: (typeof DIFFICULTY)[keyof typeof DIFFICULTY],
+     *   enemy?: string
+     * }}
+     */
+    config;
 
     static Loss = class Loss extends Step {
         /**
-         * @param {Game} game
+         * @param {*} game 
          */
         async execute(game) {
             await dialog(
                 'You were defeated... You awaken later, bruised but alive.'
             );
-            // revive the player to half health and remove one extra life if present
             if (game.player) {
                 game.player.health = Math.max(
                     1,
@@ -171,12 +177,12 @@ class BattleEncounter extends Step {
 
     static Win = class Win extends Step {
         /**
-         * @param {Game} game
+         * @param {*} game 
          */
         async execute(game) {
             await dialog('You defeated your foes!');
             if (!game.player) return;
-            // small reward: restore some stamina/mana and give a bit of luck
+
             game.player.stamina = Math.min(
                 game.player.max_stamina,
                 game.player.stamina + 10
@@ -187,61 +193,61 @@ class BattleEncounter extends Step {
             );
             game.player.luck = (game.player.luck || 0) + 1;
 
-            // Award money and an item based on difficulty
             const difficulty =
                 game.last_combat_result?.difficulty ?? DIFFICULTY.MEDIUM;
+
             let minMoney = 25,
-                maxMoney = 100;
-            let tier = 1; // 0=low,1=mid,2=high
+                maxMoney = 100,
+                tier = 1;
             switch (difficulty) {
-                case DIFFICULTY.EASY: {
+                case DIFFICULTY.EASY:
                     minMoney = 25;
                     maxMoney = 100;
                     tier = 0;
                     break;
-                }
-                case DIFFICULTY.MEDIUM: {
+                case DIFFICULTY.MEDIUM:
                     minMoney = 200;
                     maxMoney = 600;
                     tier = 1;
                     break;
-                }
-                case DIFFICULTY.HARD: {
+                case DIFFICULTY.HARD:
                     minMoney = 1200;
                     maxMoney = 5000;
                     tier = 2;
                     break;
-                }
             }
+
             const money = interpolate(minMoney, maxMoney, Math.random());
             game.player.money = (game.player.money || 0) + money;
 
-            // Select an item from the items array biased by value tiers
             const sorted = items.toSorted(
                 (a, b) => (a.value || 0) - (b.value || 0)
             );
             const third = Math.max(1, Math.floor(sorted.length / 3));
-            let pool = [];
-            if (tier === 0) pool = sorted.slice(0, third);
-            else if (tier === 1) pool = sorted.slice(third, third * 2);
-            else pool = sorted.slice(third * 2);
+            let pool =
+                tier === 0
+                    ? sorted.slice(0, third)
+                    : tier === 1
+                      ? sorted.slice(third, third * 2)
+                      : sorted.slice(third * 2);
+
             if (pool.length === 0) pool = sorted;
+
             const item = pool[Math.floor(Math.random() * pool.length)];
             game.player.inventory = game.player.inventory || [];
             game.player.inventory.push(item);
 
-            // Award a potion (always) chosen by difficulty-tier
             const potionPool = potions || [];
             let potionCandidates = potionPool;
             if (difficulty === DIFFICULTY.EASY)
                 potionCandidates = potionPool.filter(
-                    p => (p.costs?.common ?? p.value ?? 0) < 200
+                    p => (p.costs?.common ?? p.costs ?? 0) < 200
                 );
             else if (difficulty === DIFFICULTY.MEDIUM)
                 potionCandidates = potionPool.filter(
-                    p => (p.costs?.rare ?? p.value ?? 0) < 2000
+                    p => (p.costs?.rare ?? p.costs ?? 0) < 2000
                 );
-            else potionCandidates = potionPool;
+
             if (potionCandidates.length > 0) {
                 const chosenPotion = JSON.parse(
                     JSON.stringify(
@@ -253,20 +259,21 @@ class BattleEncounter extends Step {
                 game.player.inventory.push(chosenPotion);
             }
 
-            // Possibly award armor/weapon (chance scales with difficulty)
             const armorChance =
                 difficulty === DIFFICULTY.EASY
                     ? 0.3
                     : difficulty === DIFFICULTY.MEDIUM
-                    ? 0.6
-                    : 0.9;
+                      ? 0.6
+                      : 0.9;
+
             if (Math.random() < armorChance) {
                 const rarity =
                     difficulty === DIFFICULTY.EASY
                         ? 'common'
                         : difficulty === DIFFICULTY.MEDIUM
-                        ? 'rare'
-                        : 'epic';
+                          ? 'rare'
+                          : 'epic';
+
                 const armorPool = getArmorForRarity(rarity) || [];
                 if (armorPool.length > 0) {
                     const chosenArmor = JSON.parse(
@@ -280,30 +287,22 @@ class BattleEncounter extends Step {
                 }
             }
 
-            // Possibly award a spell (chance scales with difficulty)
             const spellChance =
                 difficulty === DIFFICULTY.EASY
                     ? 0.2
                     : difficulty === DIFFICULTY.MEDIUM
-                    ? 0.5
-                    : 0.8;
+                      ? 0.5
+                      : 0.8;
+
             if (Math.random() < spellChance && spells.length > 0) {
-                // Prefer spells that have params or costs for the target rarity
                 const targetRarity =
                     difficulty === DIFFICULTY.EASY
                         ? 'common'
                         : difficulty === DIFFICULTY.MEDIUM
-                        ? 'rare'
-                        : 'epic';
-                const candidates = spells.filter(s => {
-                    return (
-                        (s.params_by_rarity &&
-                            s.params_by_rarity[targetRarity]) ||
-                        (s.mana_cost_by_rarity &&
-                            s.mana_cost_by_rarity[targetRarity]) ||
-                        true
-                    );
-                });
+                          ? 'rare'
+                          : 'epic';
+
+                const candidates = spells.filter(s => true);
                 const chosenSpell = JSON.parse(
                     JSON.stringify(
                         candidates[
@@ -320,25 +319,38 @@ class BattleEncounter extends Step {
     };
 
     /**
-     * @param {(typeof DIFFICULTY)[keyof typeof DIFFICULTY]} difficulty
+     * @param {{
+     *   type: "specific",
+     *   enemy: string,
+     *   difficulty?: (typeof DIFFICULTY)[keyof typeof DIFFICULTY]
+     * } | (typeof DIFFICULTY)[keyof typeof DIFFICULTY]} config
      */
-    constructor(difficulty) {
+    constructor(config) {
         super();
-        this.difficulty = difficulty;
+
+        if (typeof config === 'string') {
+            this.config = {
+                type: 'random',
+                difficulty: config
+            };
+        } else {
+            this.config = {
+                type: 'specific',
+                enemy: config.enemy,
+                difficulty: config.difficulty ?? DIFFICULTY.MEDIUM
+            };
+        }
+
         this.next.prev = this;
     }
 
     next = new Branch(game => {
-        if (game.last_combat_result?.won) {
-            return 0;
-        }
-        return 1;
+        return game.last_combat_result?.won ? 0 : 1;
     }).with_branches(new BattleEncounter.Win(), new BattleEncounter.Loss());
 
     /**
-     * @template {Step} Next
-     * @param {Next} step
-     * @returns {Next}
+     * @param {*} step 
+     * @returns 
      */
     then(step) {
         this.next.next = step;
@@ -347,19 +359,28 @@ class BattleEncounter extends Step {
     }
 
     /**
-     * @param {Game} game
+     * @param {*} game 
      */
     async execute(game) {
         await dialog('You sense danger nearby...');
-        const enemies = pickEnemiesForDifficulty(this.difficulty);
+
+        const difficulty = this.config.difficulty ?? DIFFICULTY.MEDIUM;
+
+        let enemies;
+        if (this.config.type === 'specific') {
+            enemies = [createEnemyByName(this.config.enemy)];
+        } else {
+            enemies = pickEnemiesForDifficulty(difficulty);
+        }
+
         const combat = new CombatBuilder()
-            .with_difficulty(this.difficulty)
+            .with_difficulty(difficulty)
             .with_player(game.player)
             .with_enemies(enemies)
             .build();
 
         const result = await combat.start();
-        game.last_combat_result = { ...result, difficulty: this.difficulty };
+        game.last_combat_result = { ...result, difficulty };
     }
 }
 
@@ -514,8 +535,35 @@ class Dialog extends Step {
         return this;
     }
 
-    async execute() {
+    /**
+     * @param {*} choices
+     * @returns {this}
+     */
+    with_choices(choices) {
+        this.choices = choices;
+        return this;
+    }
+
+    /**
+     * @param {*} game
+     * @returns
+     */
+    async execute(game) {
         await dialog(this.dialog, this.render_icon);
+
+        if (!this.choices || this.choices.length === 0) return;
+
+        const labels = this.choices.map(/** @param {choice} c */ c => c.text);
+
+        const selectedText = await select(this.dialog, labels);
+        const index = labels.indexOf(selectedText);
+        const choice = this.choices[index];
+
+        if (choice.align !== null && choice.align !== undefined) {
+            game.player.alignment = choice.align;
+        }
+
+        this.next = choice.next;
     }
 }
 
@@ -713,6 +761,152 @@ class Render extends Step {
     }
 }
 
+/**
+ * @param {*} dialogText
+ * @param {*} choices
+ * @returns {Step}
+ */
+function Choice(dialogText, choices) {
+    return new Dialog(dialogText).then(
+        new Branch(async _game => {
+            const labels = choices.map(/** @param {*} c */ c => c.text);
+            const selected = await select(dialogText, labels);
+            return labels.indexOf(selected);
+        }).with_branches(
+            ...choices.map(
+                /** @param {*} c */ c => {
+                    const step = c.next;
+                    return new Execute(game => {
+                        if (c.align !== null && c.align !== undefined) {
+                            game.player.alignment = c.align;
+                        }
+                    }).then(step);
+                }
+            )
+        )
+    );
+}
+
+/**
+ * @param {*} title
+ * @param {*} inventory
+ * @returns {Step}
+ */
+function Shop(title, inventory) {
+    return new Dialog(title).then(
+        new Branch(async _game => {
+            const labels = inventory.map(
+                /** @param {*} i */ i => `${i.name} — ${i.value}c`
+            );
+            labels.push('Leave shop');
+            const selected = await select(title, labels);
+            return labels.indexOf(selected);
+        }).with_branches(
+            ...inventory.map(
+                /** @param {*} item */ item =>
+                    new Execute(game => {
+                        if ((game.player.money || 0) >= item.value) {
+                            game.player.money -= item.value;
+                            game.player.inventory.push(
+                                JSON.parse(JSON.stringify(item))
+                            );
+                        }
+                    }).then(new Dialog('You continue shopping.'))
+            ),
+            new Dialog('You leave the shop.')
+        )
+    );
+}
+
+/**
+ * @param {*} difficulty
+ * @returns {Step}
+ */
+function Encounter(difficulty) {
+    return new BattleEncounter(difficulty).then(
+        new Dialog('You survived the encounter.')
+    );
+}
+
+/**
+ * @param {string} enemyName
+ * @param {(typeof DIFFICULTY)[keyof typeof DIFFICULTY]} [difficulty]
+ */
+function EncounterWith(enemyName, difficulty = DIFFICULTY.MEDIUM) {
+    return new BattleEncounter({
+        type: 'specific',
+        enemy: enemyName,
+        difficulty
+    }).then(new Dialog(`You defeated the ${enemyName}.`));
+}
+
+/**
+ * @param {*} name
+ * @returns
+ */
+function GiveItemByName(name) {
+    return new Execute(game => {
+        const reward = items.find(i => i.name === name);
+        if (!reward) return;
+        game.player.inventory = game.player.inventory || [];
+        game.player.inventory.push(JSON.parse(JSON.stringify(reward)));
+    });
+}
+
+/**
+ * @param {*} rarity
+ * @returns {Step}
+ */
+function GiveItemByRarity(rarity) {
+    return new Execute(game => {
+        const sorted = items.toSorted(
+            (a, b) => (a.value || 0) - (b.value || 0)
+        );
+        const third = Math.max(1, Math.floor(sorted.length / 3));
+
+        let pool = [];
+
+        switch (rarity) {
+            case 'common':
+                pool = sorted.slice(0, third);
+                break;
+
+            case 'rare':
+                pool = sorted.slice(third, third * 2);
+                break;
+
+            case 'epic':
+                pool = sorted.slice(third * 2);
+                break;
+
+            default:
+                pool = sorted;
+                break;
+        }
+
+        if (pool.length === 0) return;
+
+        const reward = pool[Math.floor(Math.random() * pool.length)];
+
+        game.player.inventory = game.player.inventory || [];
+        game.player.inventory.push(JSON.parse(JSON.stringify(reward)));
+    });
+}
+
+/**
+ * @param {*} name
+ * @returns
+ */
+function GiveSpellByName(name) {
+    return new Execute(game => {
+        const spell = spells.find(s => s.name === name);
+        if (!spell) return;
+
+        game.player.spells = game.player.spells || [];
+        game.player.spells.push(JSON.parse(JSON.stringify(spell)));
+    });
+}
+
 localStorage.name ??= '';
 // new LoopedGroup(
 //     new Branch(() => {
@@ -720,10 +914,11 @@ localStorage.name ??= '';
 //         return random < 1 ? 0 : 1;
 //     }).with_branches(new BattleEncounter(DIFFICULTY.MEDIUM), null)
 // ).with_delay(100),
-const cobblestone = new Image(
-    asset('background/cobblestone.png'),
-    { width: 16, height: 16, scale: 2 }
-);
+const cobblestone = new Image(asset('background/cobblestone.png'), {
+    width: 16,
+    height: 16,
+    scale: 2
+});
 export const story = new Parallel(
     new Input('Choose a name.')
         .with_validator(
@@ -822,11 +1017,11 @@ export const story = new Parallel(
                     // for (let i = 0; i < 100; i++) {
                     //     renderer.entity(cobblestone, renderer.width * (i / 100), renderer.height * (i / 100));
                     // }
-                    for (let x = 0; x < renderer.width; x+=32) {
+                    for (let x = 0; x < renderer.width; x += 32) {
                         for (
                             let y = renderer.height * 0.55;
                             y < renderer.height * 0.65;
-                            y+=32
+                            y += 32
                         ) {
                             renderer.entity(cobblestone, x, y);
                         }
@@ -873,3 +1068,16 @@ export const story = new Parallel(
             })
         )
     );
+
+export {
+    Execute,
+    Branch,
+    Dialog,
+    Choice,
+    Shop,
+    Encounter,
+    GiveItemByName,
+    GiveItemByRarity,
+    GiveSpellByName,
+    EncounterWith
+};

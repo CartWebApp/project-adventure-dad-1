@@ -10,7 +10,8 @@ canvas.ui {
     z-index: 3;
 }
 
-body, main {
+body,
+main {
     overflow: hidden;
     margin: 0;
 }
