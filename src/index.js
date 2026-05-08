@@ -34,7 +34,7 @@ const renderer = new RaytracingRenderer(
         const g = interpolate(206, 0, time);
         const b = interpolate(235, 0, time);
         renderer.background(`rgb(${r},${g},${b})`);
-        // if (!game.player) return;
+        if (!game.player) return;
         const center_x = renderer.width * 0.6;
         const center_y = renderer.height * 0.6;
         const angle = game.time / TIME_SLOWDOWN + Math.PI * 1.05;
