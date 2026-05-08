@@ -2,7 +2,7 @@
 /** @import { RaytracingRenderer } from './raytracing.js' */
 import { Player } from './character.js';
 import { ORIENTATIONS } from './constants.js';
-import { Step, story } from './story.js';
+import { find_root, Step, story } from './story.js';
 import { items } from './obtainables.js';
 
 /**
@@ -102,18 +102,14 @@ export class Game {
             return;
         }
         this.current_step = Game.story;
+        console.log(this.current_step);
         /**
          * Due to the way the `Step` class and its extenders work,
          * the chaining may return a step far away from the first step.
          * So, we have to climb back up the tree of steps to find the first one.
          */
-        while (this.current_step?.prev || this.current_step?.parent) {
-            if (this.current_step.prev !== null) {
-                this.current_step = this.current_step.prev;
-            } else if (this.current_step.parent !== null) {
-                this.current_step = this.current_step.parent;
-            }
-        }
+        this.current_step = find_root(this.current_step);
+        console.log(this.current_step);
     }
 
     async update() {
@@ -123,6 +119,7 @@ export class Game {
         await this.current_step.execute(this);
         this.step_sequence.push(this.current_step.id);
         this.current_step = this.current_step.next;
+        console.log(this.current_step);
         this.save();
     }
 

@@ -14,6 +14,9 @@ import { CombatBuilder, pickEnemiesForDifficulty } from './battle.js';
 import { items, spells, potions, getArmorForRarity } from './obtainables.js';
 import { asset, interpolate, sleep } from './utils.js';
 import { Ground, Image, Moon, Sun, TallGround } from './objects.js';
+import { KnightStory } from './knight-steps.js';
+import { SlaveStory } from './slave-steps.js';
+import { BeggarStory } from './beggar-steps.js';
 
 /**
  * Base class for story building purposes.
@@ -66,10 +69,25 @@ export class Step {
      * @returns {Next}
      */
     then(step) {
-        this.next = step;
-        step.prev = this;
+        const root = /** @type {Step} */ (find_root(step));
+        this.next = root;
+        root.prev = this;
         return step;
     }
+}
+
+/**
+ * @param {Step | null} step
+ */
+export function find_root(step) {
+    while (step?.prev || step?.parent) {
+        if (step.prev !== null) {
+            step = step.prev;
+        } else if (step.parent !== null) {
+            step = step.parent;
+        }
+    }
+    return step;
 }
 
 /**
@@ -94,7 +112,7 @@ class Branch extends Step {
      */
     with_branches(...branches) {
         this.branches = branches.map(branch =>
-            branch !== null ? branch : new Execute(() => {})
+            branch !== null ? /** @type {Step} */ (find_root(branch)) : new Execute(() => {})
         );
         for (const branch of this.branches) {
             branch.parent = this;
@@ -117,9 +135,10 @@ class Branch extends Step {
      * @returns {Next}
      */
     then(step) {
+        const root = /** @type {Step} */ (find_root(step));
         for (const branch of this.branches) {
-            branch.next = step;
-            step.prev = branch;
+            branch.next = root;
+            root.prev = branch;
         }
         return step;
     }
@@ -159,7 +178,7 @@ class BattleEncounter extends Step {
 
     static Loss = class Loss extends Step {
         /**
-         * @param {*} game 
+         * @param {*} game
          */
         async execute(game) {
             await dialog(
@@ -177,7 +196,7 @@ class BattleEncounter extends Step {
 
     static Win = class Win extends Step {
         /**
-         * @param {*} game 
+         * @param {*} game
          */
         async execute(game) {
             await dialog('You defeated your foes!');
@@ -228,8 +247,8 @@ class BattleEncounter extends Step {
                 tier === 0
                     ? sorted.slice(0, third)
                     : tier === 1
-                      ? sorted.slice(third, third * 2)
-                      : sorted.slice(third * 2);
+                    ? sorted.slice(third, third * 2)
+                    : sorted.slice(third * 2);
 
             if (pool.length === 0) pool = sorted;
 
@@ -263,16 +282,16 @@ class BattleEncounter extends Step {
                 difficulty === DIFFICULTY.EASY
                     ? 0.3
                     : difficulty === DIFFICULTY.MEDIUM
-                      ? 0.6
-                      : 0.9;
+                    ? 0.6
+                    : 0.9;
 
             if (Math.random() < armorChance) {
                 const rarity =
                     difficulty === DIFFICULTY.EASY
                         ? 'common'
                         : difficulty === DIFFICULTY.MEDIUM
-                          ? 'rare'
-                          : 'epic';
+                        ? 'rare'
+                        : 'epic';
 
                 const armorPool = getArmorForRarity(rarity) || [];
                 if (armorPool.length > 0) {
@@ -291,16 +310,16 @@ class BattleEncounter extends Step {
                 difficulty === DIFFICULTY.EASY
                     ? 0.2
                     : difficulty === DIFFICULTY.MEDIUM
-                      ? 0.5
-                      : 0.8;
+                    ? 0.5
+                    : 0.8;
 
             if (Math.random() < spellChance && spells.length > 0) {
                 const targetRarity =
                     difficulty === DIFFICULTY.EASY
                         ? 'common'
                         : difficulty === DIFFICULTY.MEDIUM
-                          ? 'rare'
-                          : 'epic';
+                        ? 'rare'
+                        : 'epic';
 
                 const candidates = spells.filter(s => true);
                 const chosenSpell = JSON.parse(
@@ -349,17 +368,18 @@ class BattleEncounter extends Step {
     }).with_branches(new BattleEncounter.Win(), new BattleEncounter.Loss());
 
     /**
-     * @param {*} step 
-     * @returns 
+     * @param {*} step
+     * @returns
      */
     then(step) {
-        this.next.next = step;
-        step.prev = this.next;
+        const root = /** @type {Step} */ (find_root(step));
+        this.next.next = root;
+        root.prev = this.next;
         return step;
     }
 
     /**
-     * @param {*} game 
+     * @param {*} game
      */
     async execute(game) {
         await dialog('You sense danger nearby...');
@@ -381,60 +401,6 @@ class BattleEncounter extends Step {
 
         const result = await combat.start();
         game.last_combat_result = { ...result, difficulty };
-    }
-}
-
-class Battle extends Step {
-    /** @type {(game: Game) => Entity[] | Promise<Entity[]>} */
-    opponents = () => [];
-    state = STATES.BATTLE;
-    won = false;
-    /** @type {Step | null} */
-    #if_won = null;
-    /** @type {Step | null} */
-    #if_lost = null;
-
-    /**
-     * @param {(game: Game) => Entity[] | Promise<Entity[]>} opponents
-     */
-    with_opponents(opponents) {
-        this.opponents = opponents;
-        return this;
-    }
-
-    /**
-     * @param {Game} game
-     */
-    async execute(game) {
-        const opponents = await this.opponents(game);
-        while (
-            opponents.some(opponent => opponent.health > 0) ||
-            game.player.health > 0
-        ) {}
-    }
-
-    /**
-     * @param {Step} step
-     */
-    if_won(step) {
-        this.#if_won = step;
-        this.next = new Branch(() => (this.won ? 0 : 1)).with_branches(
-            this.#if_won,
-            this.#if_lost
-        );
-        return this;
-    }
-
-    /**
-     * @param {Step} step
-     */
-    if_lost(step) {
-        this.#if_lost = step;
-        this.next = new Branch(() => (this.won ? 0 : 1)).with_branches(
-            this.#if_won,
-            this.#if_lost
-        );
-        return this;
     }
 }
 
@@ -535,35 +501,35 @@ class Dialog extends Step {
         return this;
     }
 
-    /**
-     * @param {*} choices
-     * @returns {this}
-     */
-    with_choices(choices) {
-        this.choices = choices;
-        return this;
-    }
+    // /**
+    //  * @param {*} choices
+    //  * @returns {this}
+    //  */
+    // with_choices(choices) {
+    //     this.choices = choices;
+    //     return this;
+    // }
 
     /**
      * @param {*} game
      * @returns
      */
     async execute(game) {
-        await dialog(this.dialog, this.render_icon);
+        await dialog(this.dialog, this.render_icon, this.per_letter_duration);
 
-        if (!this.choices || this.choices.length === 0) return;
+        // if (!this.choices || this.choices.length === 0) return;
 
-        const labels = this.choices.map(/** @param {choice} c */ c => c.text);
+        // const labels = this.choices.map(/** @param {choice} c */ c => c.text);
 
-        const selectedText = await select(this.dialog, labels);
-        const index = labels.indexOf(selectedText);
-        const choice = this.choices[index];
+        // const selectedText = await select(this.dialog, labels);
+        // const index = labels.indexOf(selectedText);
+        // const choice = this.choices[index];
 
-        if (choice.align !== null && choice.align !== undefined) {
-            game.player.alignment = choice.align;
-        }
+        // if (choice.align !== null && choice.align !== undefined) {
+        //     game.player.alignment = choice.align;
+        // }
 
-        this.next = choice.next;
+        // this.next = choice.next;
     }
 }
 
@@ -579,7 +545,10 @@ class Parallel extends Step {
      */
     constructor(...steps) {
         super();
-        this.steps = steps;
+        this.steps = steps.map(step => /** @type {Step} */ (find_root(step)));
+        for (const step of this.steps) {
+            step.parent = this;
+        }
     }
 
     /**
@@ -742,9 +711,7 @@ class Render extends Step {
         let done = false;
         const loop = async () => {
             if (this.batch) {
-                await game.renderer.batch_async(
-                    async () => await this.render(game)
-                );
+                await game.renderer.batch(async () => await this.render(game));
             } else {
                 await this.render(game);
             }
@@ -767,6 +734,7 @@ class Render extends Step {
  * @returns {Step}
  */
 function Choice(dialogText, choices) {
+    // return new Dialog(dialogText);
     return new Dialog(dialogText).then(
         new Branch(async _game => {
             const labels = choices.map(/** @param {*} c */ c => c.text);
@@ -1009,25 +977,32 @@ export const story = new Parallel(
     )
     .then(
         new Parallel(
-            new Execute(async ({ renderer, player }) => {
-                await renderer.batch(async () => {
-                    // renderer.clear();
-                    renderer.entity(new TallGround(), 0, 0);
-                    await cobblestone.promise;
-                    // for (let i = 0; i < 100; i++) {
-                    //     renderer.entity(cobblestone, renderer.width * (i / 100), renderer.height * (i / 100));
-                    // }
-                    for (let x = 0; x < renderer.width; x += 32) {
-                        for (
-                            let y = renderer.height * 0.55;
-                            y < renderer.height * 0.65;
-                            y += 32
-                        ) {
-                            renderer.entity(cobblestone, x, y);
-                        }
-                    }
-                });
-            }),
+            new Branch(({ player }) =>
+                player.character === CHARACTER_CHOICES.KNIGHT
+                    ? 0
+                    : player.character === CHARACTER_CHOICES.SLAVE
+                    ? 1
+                    : 2
+            ).with_branches(KnightStory(), SlaveStory(), BeggarStory()),
+            // new Execute(async ({ renderer, player }) => {
+            //     await renderer.batch(async () => {
+            //         // renderer.clear();
+            //         renderer.entity(new TallGround(), 0, 0);
+            //         await cobblestone.promise;
+            //         // for (let i = 0; i < 100; i++) {
+            //         //     renderer.entity(cobblestone, renderer.width * (i / 100), renderer.height * (i / 100));
+            //         // }
+            //         for (let x = 0; x < renderer.width; x += 32) {
+            //             for (
+            //                 let y = renderer.height * 0.55;
+            //                 y < renderer.height * 0.65;
+            //                 y += 32
+            //             ) {
+            //                 renderer.entity(cobblestone, x, y);
+            //             }
+            //         }
+            //     });
+            // }),
             // new Dialog('You awaken to the sound of someone calling your name')
             //                 .with_overall_duration(2000)
             //                 .then(
