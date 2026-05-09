@@ -239,7 +239,7 @@ class BattleEncounter extends Step {
                     break;
             }
 
-            const money = interpolate(minMoney, maxMoney, Math.random());
+            const money = Math.floor(interpolate(minMoney, maxMoney, Math.random()));
             game.player.money = (game.player.money || 0) + money;
 
             const sorted = items.toSorted(
