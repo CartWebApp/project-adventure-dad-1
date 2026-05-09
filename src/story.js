@@ -239,7 +239,9 @@ class BattleEncounter extends Step {
                     break;
             }
 
-            const money = Math.floor(interpolate(minMoney, maxMoney, Math.random()));
+            const money = Math.floor(
+                interpolate(minMoney, maxMoney, Math.random())
+            );
             game.player.money = (game.player.money || 0) + money;
 
             const sorted = items.toSorted(
@@ -250,8 +252,8 @@ class BattleEncounter extends Step {
                 tier === 0
                     ? sorted.slice(0, third)
                     : tier === 1
-                    ? sorted.slice(third, third * 2)
-                    : sorted.slice(third * 2);
+                      ? sorted.slice(third, third * 2)
+                      : sorted.slice(third * 2);
 
             if (pool.length === 0) pool = sorted;
 
@@ -285,16 +287,16 @@ class BattleEncounter extends Step {
                 difficulty === DIFFICULTY.EASY
                     ? 0.3
                     : difficulty === DIFFICULTY.MEDIUM
-                    ? 0.6
-                    : 0.9;
+                      ? 0.6
+                      : 0.9;
 
             if (Math.random() < armorChance) {
                 const rarity =
                     difficulty === DIFFICULTY.EASY
                         ? 'common'
                         : difficulty === DIFFICULTY.MEDIUM
-                        ? 'rare'
-                        : 'epic';
+                          ? 'rare'
+                          : 'epic';
 
                 const armorPool = getArmorForRarity(rarity) || [];
                 if (armorPool.length > 0) {
@@ -313,16 +315,16 @@ class BattleEncounter extends Step {
                 difficulty === DIFFICULTY.EASY
                     ? 0.2
                     : difficulty === DIFFICULTY.MEDIUM
-                    ? 0.5
-                    : 0.8;
+                      ? 0.5
+                      : 0.8;
 
             if (Math.random() < spellChance && spells.length > 0) {
                 const targetRarity =
                     difficulty === DIFFICULTY.EASY
                         ? 'common'
                         : difficulty === DIFFICULTY.MEDIUM
-                        ? 'rare'
-                        : 'epic';
+                          ? 'rare'
+                          : 'epic';
 
                 const candidates = spells.filter(s => true);
                 const chosenSpell = JSON.parse(
@@ -916,29 +918,31 @@ const cobblestone = new Image(asset('background/cobblestone.png'), {
     height: 16,
     scale: 2
 });
-export const story = new Parallel(
-    new Input('Choose a name.')
-        .with_validator(
-            // @ts-expect-error
-            (/** @type {string} */ value) =>
-                typeof value === 'string' && value.length > 0
-        )
-        .with_max_length(15)
-        .handle((/** @type {string} */ value) => {
-            localStorage.name = value;
-        }),
-    new Execute(({ renderer }) => {
-        const gradient = renderer.ctx.createLinearGradient(
-            0,
-            0,
-            0,
-            renderer.height
-        );
-        gradient.addColorStop(0, 'black');
-        gradient.addColorStop(0.75, 'oklch(43.8% 0.218 303.724)');
+export const story = new Execute(async ({ renderer }) => {
+    const gradient = renderer.ctx.createLinearGradient(
+        0,
+        0,
+        0,
+        renderer.height
+    );
+    gradient.addColorStop(0, 'black');
+    gradient.addColorStop(0.75, 'oklch(43.8% 0.218 303.724)');
+    await renderer.batch(() => {
         renderer.background(gradient);
-    })
-)
+    });
+})
+    .then(
+        new Input('Choose a name.')
+            .with_validator(
+                // @ts-expect-error
+                (/** @type {string} */ value) =>
+                    typeof value === 'string' && value.length > 0
+            )
+            .with_max_length(15)
+            .handle((/** @type {string} */ value) => {
+                localStorage.name = value;
+            })
+    )
     .then(
         new Branch(async () => {
             const choice = await select(
@@ -1010,8 +1014,8 @@ export const story = new Parallel(
             player.character === CHARACTER_CHOICES.KNIGHT
                 ? 0
                 : player.character === CHARACTER_CHOICES.SLAVE
-                ? 1
-                : 2
+                  ? 1
+                  : 2
         ).with_branches(KnightStory(), SlaveStory(), BeggarStory())
         // new Execute(async ({ renderer, player }) => {
         //     await renderer.batch(async () => {

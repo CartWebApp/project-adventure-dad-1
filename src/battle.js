@@ -1051,7 +1051,13 @@ class Combat {
             /** @type {Enemy[]} */
             const enemies = this.enemies || [];
             const enemy_names = enemies.map(enemy => enemy.name);
-            const enemy_images = enemies.map(enemy => new Image(asset(`enemies/${enemy.name.toLowerCase().replace(/ /g, '_').replace(/ä/g, 'a')}/south-west.png`), { width: 92, height: 92, scale: 4 }));
+            const enemy_images = enemies.map(
+                enemy =>
+                    new Image(
+                        enemy.assets[0],
+                        { width: 92, height: 92, scale: 4 }
+                    )
+            );
             for (const image of enemy_images) {
                 image.layer = 2;
             }
@@ -1064,8 +1070,14 @@ class Combat {
                     game.renderer.height * 0.1
                 );
                 for (let i = 0; i < enemy_images.length; i++) {
-                    const x = game.renderer.width * ((i / enemy_images.length) * 0.3 + 0.5);
-                    game.renderer.entity(enemy_images[i], x, game.renderer.height * 0.15);
+                    const x =
+                        game.renderer.width *
+                        ((i / enemy_images.length) * 0.3 + 0.5);
+                    game.renderer.entity(
+                        enemy_images[i],
+                        x,
+                        game.renderer.height * 0.15
+                    );
                 }
             });
             /**
@@ -1180,9 +1192,21 @@ class Combat {
                                             game.renderer.width * 0.25,
                                             game.renderer.height * 0.1
                                         );
-                                        for (let i = 0; i < enemy_images.length; i++) {
-                                            const x = game.renderer.width * ((i / enemy_images.length) * 0.3 + 0.5);
-                                            game.renderer.entity(enemy_images[i], x, game.renderer.height * 0.15);
+                                        for (
+                                            let i = 0;
+                                            i < enemy_images.length;
+                                            i++
+                                        ) {
+                                            const x =
+                                                game.renderer.width *
+                                                ((i / enemy_images.length) *
+                                                    0.3 +
+                                                    0.5);
+                                            game.renderer.entity(
+                                                enemy_images[i],
+                                                x,
+                                                game.renderer.height * 0.15
+                                            );
                                         }
                                         await spell?.render_effect?.(
                                             game.renderer,

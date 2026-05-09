@@ -266,6 +266,7 @@ const ctx = /** @type {CanvasRenderingContext2D} */ (
  * @param {HTMLImageElement} image
  */
 function get_outline(image) {
+    console.log('loading');
     canvas.width = image.width;
     canvas.height = image.height;
     ctx.clearRect(0, 0, image.width, image.height);
@@ -312,6 +313,7 @@ function get_outline(image) {
     const min_x = Math.min(...reduced.map(({ x }) => x));
     const min_y = Math.min(...reduced.map(({ y }) => y));
     const aligned = reduced.map(({ x, y }) => ({ x: x - min_x, y: y - min_y }));
+    console.log(reduced);
     return reduced;
 }
 

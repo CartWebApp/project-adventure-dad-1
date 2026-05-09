@@ -12,6 +12,8 @@ import {
 } from './story.js';
 import { DIFFICULTY } from './constants.js';
 import { items, potions } from './obtainables.js';
+import { Image } from './objects.js';
+import { asset } from './utils.js';
 
 export function BeggarStory() {
     /**
@@ -21,7 +23,18 @@ export function BeggarStory() {
     const alignmentIndex = game => (game.player.alignment || 2) - 1;
 
     return (
-        new Dialog('A shadowy figure approaches.')
+        new Execute(async ({ renderer }) => {
+            const background = new Image(asset('background/market.png'), {
+                width: 1200,
+                height: 675,
+                scale: 1
+            });
+            background.layer = 1;
+            await renderer.batch(() => {
+                renderer.entity(background, 0, 0);
+            });
+        })
+            .then(new Dialog('A shadowy figure approaches.'))
             .then(new Dialog('They take you to a tavern basement.'))
             .then(new Dialog('They tell you of a treasure.'))
 
@@ -72,7 +85,9 @@ export function BeggarStory() {
                     },
                     {
                         text: 'Leave town',
-                        next: new Dialog('You head into the forest.').then(leave)
+                        next: new Dialog('You head into the forest.').then(
+                            leave
+                        )
                     }
                 ])
             )

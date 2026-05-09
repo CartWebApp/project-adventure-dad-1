@@ -371,7 +371,8 @@ class EnemyBuilder
             'primary_attack',
             'secondary_attack',
             'tertiary_attack',
-            'assets'
+            'assets',
+            'attack_animation'
         );
         this.data.seed =
             Math.floor(Date.now() % 2147483647) ^
@@ -385,8 +386,17 @@ class EnemyBuilder
  */
 function enemy_images(...src) {
     return src.map(
-        src => new Image(asset(`enemies/${src}`), { width: 92, height: 92 })
+        src => asset(`enemies/${src}`)
     );
+}
+
+/**
+ * @param {string} name
+ * @param {number} length
+ */
+function animation(name, length) {
+    const frames = Array(length).fill(0).map((_, i) => asset(`enemies/${name}/${i + 1}.png`));
+    return frames;
 }
 
 // create instances using builders
@@ -400,6 +410,7 @@ const enemies = [
         .with_secondary_attack('Poison Blade (Poison)')
         .with_tertiary_attack('Vanish (becomes untargetable briefly)')
         .with_assets(enemy_images('assassin/south-west.png'))
+        .with_attack_animation(animation('assassin', 8))
         .build(),
 
     new EnemyBuilder()
@@ -410,6 +421,8 @@ const enemies = [
         .with_primary_attack('Dagger Slash (Basic damage)')
         .with_secondary_attack('Dirty Trick (Blindness)')
         .with_tertiary_attack('Steal (takes money)')
+        .with_assets(enemy_images('bandit/south-west.png'))
+        .with_attack_animation(animation('bandit', 8))
         .build(),
 
     new EnemyBuilder()
@@ -420,16 +433,19 @@ const enemies = [
         .with_primary_attack('Rage Strike (Damage based on health)')
         .with_secondary_attack('Frenzy (attack speed increases)')
         .with_tertiary_attack('Reckless Swing (Player and self damage)')
+        .with_assets(enemy_images('berserker/south-west.png'))
+        .with_attack_animation(animation('berserker', 8))
         .build(),
 
-    new EnemyBuilder()
-        .with_name('Doppelgänger')
-        .with_description("Mimics the player's abilities")
-        .with_health_range([41, 80])
-        .with_attack_speed_strategy('matchPlayer')
-        .with_primary_attack('Mirror Strike (copies last move)')
-        .with_secondary_attack('Confuse (Cursed)')
-        .build(),
+    // new EnemyBuilder()
+    //     .with_name('Doppelgänger')
+    //     .with_description("Mimics the player's abilities")
+    //     .with_health_range([41, 80])
+    //     .with_attack_speed_strategy('matchPlayer')
+    //     .with_primary_attack('Mirror Strike (copies last move)')
+    //     .with_secondary_attack('Confuse (Cursed)')
+    //     .with_assets(enemy_images('assassin/south-west.png'))
+    //     .build(),
 
     new EnemyBuilder()
         .with_name('Druid')
@@ -439,6 +455,8 @@ const enemies = [
         .with_primary_attack('Vine Whip (Basic damage + 10% to apply rooted)')
         .with_secondary_attack("Nature's Curse (Cursed)")
         .with_tertiary_attack('Vine grasp (Rooted)')
+        .with_assets(enemy_images('druid/south-west.png'))
+        .with_attack_animation(animation('druid', 8))
         .build(),
 
     new EnemyBuilder()
@@ -449,6 +467,8 @@ const enemies = [
         .with_primary_attack('Fire Slash (Basic attack with 50% to burn)')
         .with_secondary_attack('Ignite (+50% damage next turn)')
         .with_tertiary_attack('Frost Burn (Burning + Iced)')
+        .with_assets(enemy_images('fire_elemental/south-west.png'))
+        .with_attack_animation(animation('fire_elemental', 8))
         .build(),
 
     new EnemyBuilder()
@@ -459,6 +479,8 @@ const enemies = [
         .with_primary_attack('Flame Bite (Burning)')
         .with_secondary_attack('Lava Spit (Burning)')
         .with_tertiary_attack('Heat Shield (reduces damage +10%)')
+        .with_assets(enemy_images('fire_salamander/south-west.png'))
+        .with_attack_animation(animation('fire_salamander', 8))
         .build(),
 
     new EnemyBuilder()
@@ -469,6 +491,8 @@ const enemies = [
         .with_primary_attack('Stone Claw (Basic damage)')
         .with_secondary_attack('Petrify Touch (Petrified)')
         .with_tertiary_attack('Harden (reduces damage taken +50%)')
+        .with_assets(enemy_images('gargoyle/south-west.png'))
+        .with_attack_animation(animation('gargoyle', 8))
         .build(),
 
     new EnemyBuilder()
@@ -479,6 +503,8 @@ const enemies = [
         .with_primary_attack('Stab (Basic attack)')
         .with_secondary_attack('Escape (dodges next attack)')
         .with_tertiary_attack('Cowardice (+20% dodge chance)')
+        .with_assets(enemy_images('goblin/south-west.png'))
+        .with_attack_animation(animation('goblin', 8))
         .build(),
 
     new EnemyBuilder()
@@ -491,6 +517,8 @@ const enemies = [
         )
         .with_secondary_attack('Static Surge (Shock)')
         .with_tertiary_attack('Lightning Dash (Dodge next attack)')
+        .with_assets(enemy_images('lightning_elemental/south-west.png'))
+        .with_attack_animation(animation('lightning_elemental', 8))
         .build(),
 
     new EnemyBuilder()
@@ -501,6 +529,8 @@ const enemies = [
         .with_primary_attack('Bite Trap (Basic Attack)')
         .with_secondary_attack('Slight Heal (+5% health regain)')
         .with_tertiary_attack('Close (+100% damage resistance)')
+        .with_assets(enemy_images('mimic/1.png'))
+        .with_attack_animation(enemy_images(...Array(7).fill(0).map((_, i) => `mimic/${i + 1}.png`)))
         .build(),
 
     new EnemyBuilder()
@@ -511,6 +541,8 @@ const enemies = [
         .with_primary_attack('Vine Grab (Rooted)')
         .with_secondary_attack('Spore Cloud (Blindness)')
         .with_tertiary_attack('Drain Life (heals 30% of damage dealt)')
+        .with_assets(enemy_images('plant_monster/south-west.png'))
+        .with_attack_animation(animation('plant_monster', 8))
         .build(),
 
     new EnemyBuilder()
@@ -521,6 +553,8 @@ const enemies = [
         .with_primary_attack('Heavy Slash (Basic damage)')
         .with_secondary_attack('Shield Bash (Stunned)')
         .with_tertiary_attack('Dark Resolve (Weakness)')
+        .with_assets(enemy_images('rogue_knight/south-west.png'))
+        .with_attack_animation(animation('rogue_knight', 8))
         .build(),
 
     new EnemyBuilder()
@@ -531,6 +565,8 @@ const enemies = [
         .with_primary_attack('Bone Slash (Basic damage)')
         .with_secondary_attack('Cursed Formation (curse)')
         .with_tertiary_attack('Reassemble (regenerate)')
+        .with_assets(enemy_images('skeleton/south-west.png'))
+        .with_attack_animation(animation('skeleton', 8))
         .build(),
 
     new EnemyBuilder()
@@ -541,6 +577,8 @@ const enemies = [
         .with_primary_attack('Slam (Basic damage)')
         .with_secondary_attack('Acid Splash (Poison)')
         .with_tertiary_attack('Split (duplicates at low health)')
+        .with_assets(enemy_images('slime/slime.png'))
+        .with_attack_animation(animation('slime', 14))
         .build(),
 
     new EnemyBuilder()
@@ -551,6 +589,8 @@ const enemies = [
         .with_primary_attack('Club Smash (Basic damage)')
         .with_secondary_attack('Regenerate (heals over time)')
         .with_tertiary_attack('Ground Slam (Stunned)')
+        .with_assets(enemy_images('troll/south-west.png'))
+        .with_attack_animation(animation('troll', 8))
         .build(),
 
     new EnemyBuilder()
@@ -561,6 +601,8 @@ const enemies = [
         .with_primary_attack('Dark Bolt (Cursed)')
         .with_secondary_attack('Wither Spell (Withering)')
         .with_tertiary_attack('Elemental Bolt (Random element)')
+        .with_assets(enemy_images('wicked_mage/south-west.png'))
+        .with_attack_animation(animation('wicked_mage', 5))
         .build(),
 
     new EnemyBuilder()
@@ -571,6 +613,8 @@ const enemies = [
         .with_primary_attack('Quick Gust (Basic damage)')
         .with_secondary_attack('Wind Dash (+25% dodge chance)')
         .with_tertiary_attack('Harsh Winds (-15% accuracy)')
+        .with_assets(enemy_images('wind_elemental/south-west.png'))
+        .with_attack_animation(animation('wind_elemental', 8))
         .build(),
 
     new EnemyBuilder()
@@ -581,6 +625,8 @@ const enemies = [
         .with_primary_attack('Slash (Basic damage)')
         .with_secondary_attack('Rotting Bite (Poison)')
         .with_tertiary_attack('Insidious Strike (Weakness)')
+        .with_assets(enemy_images('zombie/south-west.png'))
+        .with_attack_animation(animation('zombie', 8))
         .build()
 ];
 /**

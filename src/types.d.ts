@@ -13,8 +13,8 @@ export type EnemyBuilderData = {
     secondary_attack: string | null;
     tertiary_attack: string | null;
     seed: number;
-    assets: Image[];
-    attack_animation: Animation;
+    assets: string[];
+    attack_animation: string[];
 };
 
 export interface Effect {
