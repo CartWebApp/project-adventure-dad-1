@@ -1,4 +1,4 @@
-import { Execute, Branch, Dialog, Choice, Shop, Encounter, GiveItemByRarity, EncounterWith } from './story.js';
+import { Execute, Branch, Dialog, Choice, Shop, Encounter, GiveItemByRarity, EncounterWith, GiveItemByName } from './story.js';
 import { DIFFICULTY } from './constants.js';
 import { items, potions } from './obtainables.js';
 
@@ -14,10 +14,13 @@ export function SlaveStory() {
             .then(new Dialog('He brings you to the forest edge.'))
             .then(new Dialog('You are hesitant yet still enter the forest'))
             .then(new Dialog('You enter the cabin and you look through the shelves and find yourself some items and end up finding a chest.'))
+            .then(GiveItemByName("Health Potion"))
+            .then(GiveItemByName("Mana Potion"))
+            .then(GiveItemByName("Molotov Cocktail"))
             .then(new Dialog('A chest turns into a mimic!'))
             .then(EncounterWith("mimic", DIFFICULTY.EASY))
             .then(GiveItemByRarity("rare"))
-            .then(new Dialog('You find a rare item on the mimic and leave to venture into the forest.'))
+            .then(new Dialog('You find a rare item in the mimic and leave to venture into the forest.'))
 
             .then(Encounter(DIFFICULTY.EASY))
             .then(Encounter(DIFFICULTY.MEDIUM))

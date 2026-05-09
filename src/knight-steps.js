@@ -28,12 +28,12 @@ export function KnightStory() {
             .then(
                 Choice('How do you respond?', [
                     {
-                        text: '"Ha you old man.. Engraned in your old ways. Just let me date your daughter it\'s not like this house has high standards anyway, considering you\'re the head."',
+                        text: '"Ha you old man.. Engraned in your old ways."',
                         align: 3,
                         next: new Dialog('You leave with defiance.')
                     },
                     {
-                        text: '"I won\'t give up! I\'ll make sure to prove you wrong eventually."',
+                        text: '"I won\'t give up!"',
                         align: 2,
                         next: new Dialog('You leave determined.')
                     },
@@ -58,7 +58,7 @@ export function KnightStory() {
                                 game.player.money += 100;
                             })
                         )
-                        .then(new Dialog('Your goal is commendable let me help you on this journey of your\'s. Succeed and I\'ll help you convince Leon.')),
+                        .then(new Dialog('Your goal is commendable let me help you on this journey.')),
 
                     // (Neutral)
                     GiveItemByRarity('common')
@@ -67,7 +67,7 @@ export function KnightStory() {
                                 game.player.money += 200;
                             })
                         )
-                        .then(new Dialog('Here let me give you something before you go. You\'ve been a good knight I\'m sure you\'ll succeed.')),
+                        .then(new Dialog('Here let me give you something before you go.')),
 
                     // (Negative)
                     GiveItemByName('Basic Sword').then(
