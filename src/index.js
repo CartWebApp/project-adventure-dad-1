@@ -1,7 +1,7 @@
 // @ts-check
 import { TIME_SLOWDOWN } from './constants.js';
 import { RaytracingRenderer } from './raytracing.js';
-import { interpolate, pixelator } from './utils.js';
+import { interpolate, pixelator, sleep } from './utils.js';
 import './images.js';
 import { Game } from './game.js';
 import { init, inventory } from './ui.js';
@@ -101,7 +101,9 @@ addEventListener('keydown', e => {
     }
 });
 async function loop() {
+    console.log(game.current_step);
     if (game.current_step === null) {
+        console.log('null');
         return;
     }
     if (game.paused) {
@@ -111,4 +113,14 @@ async function loop() {
     return requestAnimationFrame(loop);
 }
 
+async function time() {
+    await Promise.resolve();
+    game.time++;
+    game.renderer.refresh();
+    game.save();
+    await sleep(100);
+    return time();
+}
+
+time();
 loop();

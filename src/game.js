@@ -113,6 +113,7 @@ export class Game {
     }
 
     async update() {
+        console.log(this.current_step);
         if (this.current_step === null) {
             return;
         }
@@ -129,6 +130,7 @@ export class Game {
             player: this.player,
             time: this.time
         });
+        console.log('saved');
     }
 
     load() {

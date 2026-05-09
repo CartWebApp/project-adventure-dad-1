@@ -321,7 +321,9 @@ export async function dialog(
      * @param {KeyboardEvent} e
      */
     function handler(e) {
+        console.log(e);
         if (e.key === 'Enter') {
+            console.log('potato');
             resolve();
             removeEventListener('keydown', handler);
         }
